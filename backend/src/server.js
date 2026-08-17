@@ -1,33 +1,33 @@
 import express from 'express';
-import dotenv from 'dotenv';
 import cors from 'cors';
-import { connectDB } from './config/db.js';
+import dotenv from 'dotenv';
+import connectDB from './config/db.js';
 
 import authRoutes from './routes/authRoutes.js';
 import providerRoutes from './routes/providerRoutes.js';
 import customerRoutes from './routes/customerRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 
 dotenv.config();
-
-const app = express();
-const PORT = process.env.PORT || 5000;
 
 // Connect to MongoDB Atlas
 connectDB();
 
-// Middlewares
-app.use(cors({ origin: true, credentials: true }));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+const app = express();
 
-// Health Check
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Health Check Endpoint
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'online',
-    appName: 'bookmyorder.online',
+    app: 'bookmyorder.online API',
     tagline: 'Skip The Queue',
-    timestamp: new Date().toISOString(),
+    timestamp: new Date(),
   });
 });
 
@@ -36,13 +36,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/provider', providerRoutes);
 app.use('/api/customer', customerRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/ai', aiRoutes);
 
-
-// Global Error Handler
-app.use((err, req, res, next) => {
-  console.error('[bookmyorder Server Error]:', err.stack);
-  res.status(500).json({ message: err.message || 'Internal Server Error' });
-});
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`=======================================================`);

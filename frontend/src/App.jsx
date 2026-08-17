@@ -5,13 +5,16 @@ import AuthModal from './components/AuthModal';
 import ProviderPortal from './pages/ProviderPortal';
 import RestaurantDetailPage from './pages/RestaurantDetailPage';
 import CustomerProfilePage from './pages/CustomerProfilePage';
+import AdminLoginPage from './pages/AdminLoginPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
+import AiFoodAssistant from './components/AiFoodAssistant';
 import { getMeApi, getRestaurantsApi } from './services/api';
 import { Store, Utensils, MapPin, Clock, Search, ShieldCheck, Calendar, Users, Heart, ShoppingBag, Tag, ChevronRight } from 'lucide-react';
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [currentTab, setCurrentTab] = useState('home'); // 'home', 'detail', 'provider', 'profile'
+  const [currentTab, setCurrentTab] = useState('home'); // 'home', 'detail', 'provider', 'profile', 'admin'
   const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
 
   const [restaurants, setRestaurants] = useState([]);
@@ -101,7 +104,7 @@ export default function App() {
                       Pre-Order Food.
                     </h1>
 
-                    {/* Search & Reservation Bar Card (Exact design matching reference) */}
+                    {/* Search & Reservation Bar Card */}
                     <div className="bg-white p-5 rounded-3xl shadow-xl border border-sand-200 space-y-4">
                       
                       {/* Search Mode Toggle Buttons */}
@@ -206,11 +209,9 @@ export default function App() {
 
                   {/* Right Column: Exact Arched Jharokha Silhouette Image Mask (5 cols) */}
                   <div className="lg:col-span-5 relative flex justify-center items-center">
-                    
-                    {/* SVG Clip Path & Mask Container */}
                     <div className="relative w-full max-w-lg aspect-[4/5] flex justify-center items-center">
                       
-                      {/* Background Organic Line Strokes (Matching reference image) */}
+                      {/* Background Organic Line Strokes */}
                       <svg className="absolute inset-0 w-full h-full text-sand-300 pointer-events-none" viewBox="0 0 500 600" fill="none">
                         <path d="M 40 160 C 20 60, 180 10, 320 40 C 480 80, 500 240, 460 400 C 420 540, 160 580, 60 500 C 10 440, 10 240, 40 160 Z" stroke="#E8E1D1" strokeWidth="2" strokeDasharray="6 6" fill="none" />
                       </svg>
@@ -219,7 +220,6 @@ export default function App() {
                       <svg viewBox="0 0 500 600" className="w-full h-full drop-shadow-2xl">
                         <defs>
                           <clipPath id="jharokhaArchClip">
-                            {/* Indian Jharokha Pointed Multi-Arch Path */}
                             <path d="
                               M 60,200 
                               C 60,130 110,60 250,20 
@@ -241,7 +241,6 @@ export default function App() {
                           clipPath="url(#jharokhaArchClip)" 
                         />
 
-                        {/* Arched Border Stroke */}
                         <path d="
                           M 60,200 
                           C 60,130 110,60 250,20 
@@ -252,7 +251,7 @@ export default function App() {
                         " fill="none" stroke="#FFFFFF" strokeWidth="12" />
                       </svg>
 
-                      {/* Floating Dark Green Badge overlay matching reference image 1 */}
+                      {/* Floating Dark Green Badge overlay */}
                       <div className="absolute top-12 right-2 sm:right-6 bg-[#14382B] text-white p-4 rounded-full shadow-2xl border-2 border-white/30 flex flex-col items-center justify-center text-center w-28 h-28 transform hover:scale-105 transition-transform z-10">
                         <Heart className="w-4 h-4 text-terracotta-500 mb-0.5" />
                         <p className="font-serif italic text-xs leading-tight text-sand-100">Good Food</p>
@@ -260,7 +259,6 @@ export default function App() {
                       </div>
 
                     </div>
-
                   </div>
 
                 </div>
@@ -268,7 +266,7 @@ export default function App() {
               </div>
             </section>
 
-            {/* 4 Feature Banner Pills (Matching Reference Image 1) */}
+            {/* 4 Feature Banner Pills */}
             <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
               <div className="bg-white rounded-3xl p-6 shadow-sm border border-sand-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-slate-800">
                 
@@ -362,7 +360,7 @@ export default function App() {
                         </div>
                         
                         <div className="flex items-center justify-between text-xs text-slate-500">
-                          <span className="truncate">{rest.cuisine?.[0] || 'Rooftop'} • {rest.cuisine?.[1] || 'Continental'}</span>
+                          <span className="truncate">{rest.tagline || 'Rooftop & Bistro'}</span>
                           <span className="flex items-center gap-1 font-semibold">
                             <MapPin className="w-3 h-3 text-[#D84315]" /> {rest.city}
                           </span>
@@ -400,10 +398,21 @@ export default function App() {
           <CustomerProfilePage user={user} onOpenAuth={() => setIsAuthOpen(true)} />
         )}
 
+        {currentTab === 'admin' && (
+          user && user.role === 'admin' ? (
+            <AdminDashboardPage adminUser={user} onLogout={handleLogout} />
+          ) : (
+            <AdminLoginPage onLoginSuccess={(u) => setUser(u)} />
+          )
+        )}
+
       </main>
 
+      {/* Floating Gemini AI Assistant Widget */}
+      <AiFoodAssistant selectedRestaurantId={selectedRestaurantId} />
+
       {/* Footer */}
-      <Footer onOpenAdminLogin={() => alert('Super Admin Login modal will be connected in Prompt 3')} />
+      <Footer onOpenAdminLogin={() => setCurrentTab('admin')} />
 
       {/* Auth Modal */}
       <AuthModal

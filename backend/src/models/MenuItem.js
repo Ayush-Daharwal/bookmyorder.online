@@ -28,11 +28,20 @@ const menuItemSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    halfPrice: {
+      type: Number,
+      default: 0,
+    },
+    fullPrice: {
+      type: Number,
+      default: 0,
+    },
     pricing: {
-      default: { type: Number, required: true },
+      default: { type: Number, default: 0 },
       half: { type: Number, default: 0 },
       full: { type: Number, default: 0 },
     },
+    tags: [{ type: String }],
     image: {
       type: String,
       default: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=400',

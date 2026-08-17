@@ -25,8 +25,19 @@ export const protect = async (req, res, next) => {
 
 export const requireRole = (roles) => {
   return (req, res, next) => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      return res.status(403).json({ message: `Access forbidden: Required role [${roles.join(', ')}]` });
+    const roleList = Array.isArray(roles) ? roles : [roles];
+    if (!req.user || !roleList.includes(req.user.role)) {
+      return res.status(403).json({ message: `Access forbidden: Required role [${roleList.join(', ')}]` });
+    }
+    next();
+  };
+};
+
+export const authorize = (...roles) => {
+  return (req, res, next) => {
+    const roleList = Array.isArray(roles[0]) ? roles[0] : roles;
+    if (!req.user || !roleList.includes(req.user.role)) {
+      return res.status(403).json({ message: `Access forbidden: Required role [${roleList.join(', ')}]` });
     }
     next();
   };
