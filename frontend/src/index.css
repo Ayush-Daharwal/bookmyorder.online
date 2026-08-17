@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-sand-50 text-slate-800 font-sans selection:bg-terracotta-500 selection:text-white;
+  }
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.gradient-hero-badge {
+  background: linear-gradient(135deg, #14382B 0%, #2E6B4E 100%);
+}
+
+.gradient-orange-btn {
+  background: linear-gradient(135deg, #FF5722 0%, #F25C05 100%);
+}
