@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { Utensils, MapPin, User, LogOut, Store, ShieldCheck, Sparkles } from 'lucide-react';
+import React from 'react';
+import { Store, User, LogOut } from 'lucide-react';
 
 export default function Navbar({ user, onOpenAuth, onLogout, currentTab, setCurrentTab }) {
   return (
-    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-sand-200 shadow-sm">
+    <header className="sticky top-0 z-40 bg-white border-b border-sand-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
         
-        {/* Brand Logo */}
+        {/* Brand Logo - Blends seamlessly into pure white background */}
         <div 
           onClick={() => setCurrentTab('home')}
           className="flex items-center gap-3 cursor-pointer group"
@@ -14,32 +14,39 @@ export default function Navbar({ user, onOpenAuth, onLogout, currentTab, setCurr
           <img 
             src="/logo.png" 
             alt="bookmyorder - Skip The Queue" 
-            className="h-11 w-auto object-contain transition-transform group-hover:scale-105"
+            className="h-12 sm:h-16 w-auto object-contain transition-transform group-hover:scale-105"
           />
         </div>
 
         {/* Navigation Tabs */}
-        <nav className="hidden md:flex items-center gap-1 bg-sand-100 p-1.5 rounded-full border border-sand-200">
+        <nav className="hidden md:flex items-center gap-1.5 bg-[#FAF8F5] px-3 py-1.5 rounded-full border border-sand-200">
           <button
             onClick={() => setCurrentTab('home')}
             className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
               currentTab === 'home' 
-                ? 'bg-forest-800 text-white shadow' 
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[#14382B] text-white shadow' 
+                : 'text-slate-700 hover:text-slate-900'
             }`}
           >
-            Find Restaurants
+            Home
+          </button>
+
+          <button
+            onClick={() => setCurrentTab('home')}
+            className="px-5 py-2 rounded-full text-sm font-semibold text-slate-700 hover:text-slate-900"
+          >
+            Restaurants
           </button>
           
           <button
             onClick={() => setCurrentTab('provider')}
             className={`px-5 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-1.5 ${
               currentTab === 'provider' 
-                ? 'bg-forest-800 text-white shadow' 
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[#14382B] text-white shadow' 
+                : 'text-slate-700 hover:text-slate-900'
             }`}
           >
-            <Store className="w-4 h-4 text-terracotta-500" />
+            <Store className="w-4 h-4 text-[#FF5722]" />
             Partner POS & KDS
           </button>
 
@@ -48,8 +55,8 @@ export default function Navbar({ user, onOpenAuth, onLogout, currentTab, setCurr
               onClick={() => setCurrentTab('profile')}
               className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
                 currentTab === 'profile' 
-                  ? 'bg-forest-800 text-white shadow' 
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-[#14382B] text-white shadow' 
+                  : 'text-slate-700 hover:text-slate-900'
               }`}
             >
               My Bookings
@@ -57,17 +64,17 @@ export default function Navbar({ user, onOpenAuth, onLogout, currentTab, setCurr
           )}
         </nav>
 
-        {/* User Account / Auth Action */}
+        {/* User Account / Sign In */}
         <div className="flex items-center gap-3">
           {user ? (
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-sand-100 px-3.5 py-1.5 rounded-full border border-sand-200">
-                <div className="w-7 h-7 rounded-full bg-forest-800 text-white flex items-center justify-center font-bold text-xs">
+              <div className="flex items-center gap-2 bg-[#FAF8F5] px-3.5 py-1.5 rounded-full border border-sand-200">
+                <div className="w-8 h-8 rounded-full bg-[#14382B] text-white flex items-center justify-center font-bold text-xs">
                   {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                 </div>
                 <div className="text-xs">
                   <p className="font-bold text-slate-800 leading-tight">{user.name}</p>
-                  <p className="text-terracotta-600 font-medium capitalize leading-none">{user.role}</p>
+                  <p className="text-[#FF5722] font-medium capitalize leading-none">{user.role}</p>
                 </div>
               </div>
               
@@ -82,10 +89,10 @@ export default function Navbar({ user, onOpenAuth, onLogout, currentTab, setCurr
           ) : (
             <button
               onClick={onOpenAuth}
-              className="gradient-orange-btn text-white px-5 py-2.5 rounded-full font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+              className="bg-[#14382B] hover:bg-[#1B4D36] text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow transition-all flex items-center gap-2"
             >
               <User className="w-4 h-4" />
-              Sign In / Register
+              Login / Sign Up
             </button>
           )}
         </div>
