@@ -16,6 +16,11 @@ export default function RestaurantsPage({ onOpenDetail, initialCity = 'Bhopal' }
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Automatically detect location on mount
+    handleDetectLocation();
+  }, []);
+
+  useEffect(() => {
     fetchData();
   }, [selectedCity, selectedTier, sortBy, search]);
 
@@ -75,17 +80,14 @@ export default function RestaurantsPage({ onOpenDetail, initialCity = 'Bhopal' }
     <div className="min-h-screen bg-[#FAF8F5] pb-16">
       
       {/* Header Banner */}
-      <section className="bg-[#14382B] text-white pt-12 pb-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      <section className="bg-[#14382B] text-white py-6 sm:py-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 bg-[#FF5722]/20 border border-[#FF5722]/40 text-[#FF8A65] px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5 text-[#FF5722]" /> Live City Restaurant Discovery
-            </div>
-            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight">
+          <div className="space-y-1.5">
+            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
               Explore Top Restaurants Near You
             </h1>
-            <p className="text-sand-200 text-sm max-w-xl">
+            <p className="text-sand-200 text-xs sm:text-sm max-w-xl">
               Book your table in advance, pre-order handcrafted meals, or batch pick up at institutional dining without waiting in queues.
             </p>
           </div>
@@ -107,8 +109,8 @@ export default function RestaurantsPage({ onOpenDetail, initialCity = 'Bhopal' }
         </div>
       </section>
 
-      {/* Main Filter & Search Bar Card - Fixed positioning to avoid overflow cutoff */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-20">
+      {/* Main Filter & Search Bar Card - Compact positioning */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-4 relative z-20">
         <div className="bg-white rounded-3xl p-5 shadow-xl border border-sand-200 space-y-4">
           
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
@@ -307,26 +309,49 @@ export default function RestaurantsPage({ onOpenDetail, initialCity = 'Bhopal' }
             })}
           </div>
         ) : (
-          <div className="bg-white rounded-3xl p-12 text-center border border-sand-200 max-w-md mx-auto space-y-4 shadow-sm">
-            <div className="w-16 h-16 rounded-full bg-orange-50 text-[#FF5722] flex items-center justify-center mx-auto">
-              <Utensils className="w-8 h-8" />
+          <div className="bg-white rounded-3xl p-10 text-center border border-sand-200 max-w-xl mx-auto shadow-xl space-y-6">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-orange-100 to-amber-50 text-[#FF5722] flex items-center justify-center mx-auto shadow-inner border border-orange-200/60 animate-bounce">
+              <Sparkles className="w-10 h-10" />
             </div>
-            <div className="space-y-1">
-              <h3 className="font-extrabold text-slate-900 text-lg">No Restaurants Found</h3>
-              <p className="text-xs text-slate-500">
-                We couldn't find any partner restaurants in <strong>{selectedCity}</strong> matching your search.
+
+            <div className="space-y-2">
+              <span className="bg-emerald-100 text-emerald-900 border border-emerald-300 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                🚀 Expanding Soon to {selectedCity || 'Your City'}
+              </span>
+              <h3 className="font-extrabold text-slate-900 text-2xl tracking-tight">
+                bookmyorder is Launching in {selectedCity || 'Your City'}!
+              </h3>
+              <p className="text-xs text-slate-600 font-medium leading-relaxed max-w-md mx-auto">
+                We are currently operating at peak capacity in <strong>Bhopal</strong>! We are actively onboarding partner restaurants & campus canteens in <strong>{selectedCity || 'your city'}</strong>.
               </p>
             </div>
-            <button
-              onClick={() => {
-                setSelectedCity('All Cities');
-                setSearch('');
-                setSelectedTier('all');
-              }}
-              className="bg-[#14382B] text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow hover:bg-[#1B4D36] transition-all"
-            >
-              Reset Filters & Show All Cities
-            </button>
+
+            <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-sand-200 text-xs font-bold text-slate-700 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="text-left">
+                <p className="font-extrabold text-slate-900">Join {selectedCity || 'City'} Waitlist</p>
+                <p className="text-[10px] text-slate-500 font-normal">5,420+ diners pre-registered in {selectedCity || 'your city'}</p>
+              </div>
+              <button 
+                onClick={() => alert(`🎉 Thank you! You're #5,421 on the ${selectedCity || 'City'} launch waitlist. We'll notify you on launch!`)}
+                className="bg-[#FF5722] hover:bg-[#D84315] text-white px-4 py-2.5 rounded-xl text-xs font-black shadow transition-all whitespace-nowrap"
+              >
+                Notify Me 🎉
+              </button>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={() => {
+                  setSelectedCity('Bhopal');
+                  setSearch('');
+                  setSelectedTier('all');
+                }}
+                className="w-full bg-[#14382B] hover:bg-[#1B4D36] text-white py-3.5 rounded-2xl font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <MapPin className="w-4 h-4 text-[#FF5722]" />
+                Explore Active Venues in Bhopal (4+ Venues Live)
+              </button>
+            </div>
           </div>
         )}
 

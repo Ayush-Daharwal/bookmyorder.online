@@ -32,7 +32,10 @@ export default function Navbar({ user, onOpenAuth, onLogout, currentTab, setCurr
           </button>
 
           <button
-            onClick={() => setCurrentTab('restaurants')}
+            onClick={() => {
+              setCurrentTab('restaurants');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
             className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
               currentTab === 'restaurants' 
                 ? 'bg-[#14382B] text-white shadow' 

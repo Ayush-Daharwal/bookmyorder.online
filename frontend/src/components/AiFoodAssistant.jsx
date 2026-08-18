@@ -11,7 +11,7 @@ export default function AiFoodAssistant({ restaurantId }) {
   const [messages, setMessages] = useState([
     {
       sender: 'ai',
-      text: 'Namaste! I am GourmetAI 🤖, your personal culinary & menu concierge. Ask me for smart dish recommendations, high-protein meals, chef specials, or budget pairings!',
+      text: 'Namaste! I am Shushi AI 🤖, your personal culinary concierge. Ask me for smart dish recommendations, high-protein meals, chef specials, or budget pairings!',
     },
   ]);
 
@@ -62,14 +62,16 @@ export default function AiFoodAssistant({ restaurantId }) {
   return (
     <div className="fixed bottom-6 right-6 z-50">
       
-      {/* Floating Launcher Button */}
+      {/* Floating Launcher Button with Luxury Style */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="bg-[#14382B] hover:bg-[#1B4D36] text-white p-4 rounded-full shadow-2xl border-2 border-[#FF5722] flex items-center gap-2.5 transition-all transform hover:scale-105 group"
+          className="bg-gradient-to-r from-[#14382B] via-[#1B4D36] to-[#0D261C] hover:from-[#1B4D36] hover:to-[#14382B] text-white px-5 py-3.5 rounded-full shadow-2xl border-2 border-amber-400/80 flex items-center gap-2.5 transition-all duration-300 transform hover:scale-105 group backdrop-blur-md"
         >
-          <Bot className="w-6 h-6 text-[#FF5722] animate-bounce" />
-          <span className="font-extrabold text-xs tracking-wide hidden sm:inline">GourmetAI</span>
+          <div className="w-7 h-7 rounded-full bg-amber-400/20 flex items-center justify-center text-amber-400 group-hover:rotate-12 transition-transform">
+            <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
+          </div>
+          <span className="font-extrabold text-xs tracking-wider text-sand-100 hidden sm:inline">Shushi AI</span>
         </button>
       )}
 
@@ -80,11 +82,11 @@ export default function AiFoodAssistant({ restaurantId }) {
           {/* Drawer Header */}
           <div className="bg-[#14382B] text-white p-4 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-[#FF5722]">
-                <Bot className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-amber-400">
+                <Sparkles className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-extrabold text-sm leading-tight">GourmetAI Concierge</h3>
+                <h3 className="font-extrabold text-sm leading-tight">Shushi AI Concierge</h3>
                 <p className="text-[10px] text-sand-200 flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-[#FF5722]" /> Powered by Gemini AI 1.5
                 </p>

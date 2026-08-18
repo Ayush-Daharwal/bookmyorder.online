@@ -24,10 +24,20 @@ export default function App() {
   const [selectedTier, setSelectedTier] = useState('all');
 
   // Search Filter State (matching reference UI)
+  const [searchMode, setSearchMode] = useState('table'); // 'table' or 'preorder'
   const [location, setLocation] = useState('Bhopal, MP');
   const [searchDate, setSearchDate] = useState('2026-05-17');
   const [searchTime, setSearchTime] = useState('7:00 PM');
   const [searchGuests, setSearchGuests] = useState('2 People');
+
+  const handleSetAsapTime = () => {
+    const now = new Date();
+    let hours = now.getHours();
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+    setSearchTime(`⚡ ASAP (${hours}:${minutes} ${ampm})`);
+  };
 
   useEffect(() => {
     checkUser();
@@ -111,36 +121,28 @@ export default function App() {
                       
                       {/* Search Mode Toggle Buttons */}
                       <div className="flex items-center gap-3 border-b border-sand-200 pb-3">
-                        <button className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#14382B] text-white font-bold text-xs shadow">
+                        <button 
+                          onClick={() => setSearchMode('table')}
+                          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs shadow transition-all cursor-pointer ${
+                            searchMode === 'table'
+                              ? 'bg-[#14382B] text-white shadow'
+                              : 'bg-[#FAF8F5] hover:bg-sand-100 text-slate-700 border border-sand-200'
+                          }`}
+                        >
                           <Utensils className="w-4 h-4" />
                           Book a Table
                         </button>
-                        <button className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#FAF8F5] hover:bg-sand-100 text-slate-700 font-bold text-xs transition-all border border-sand-200">
+                        <button 
+                          onClick={() => setSearchMode('preorder')}
+                          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                            searchMode === 'preorder'
+                              ? 'bg-[#14382B] text-white shadow'
+                              : 'bg-[#FAF8F5] hover:bg-sand-100 text-slate-700 border border-sand-200'
+                          }`}
+                        >
                           <ShoppingBag className="w-4 h-4 text-[#FF5722]" />
                           Pre-Order Food
                         </button>
-                      </div>
-
-                      {/* Restaurant Selection Dropdown (Select Venue to Check Tables & Menu) */}
-                      <div className="bg-[#FAF8F5] p-3 rounded-2xl border border-sand-200">
-                        <label className="block text-[10px] text-slate-400 font-extrabold uppercase tracking-wider mb-1">
-                          Select Specific Restaurant (To View Tables & Menu)
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <Utensils className="w-4 h-4 text-[#14382B] shrink-0" />
-                          <select
-                            value={selectedHeroRestaurant}
-                            onChange={(e) => setSelectedHeroRestaurant(e.target.value)}
-                            className="bg-transparent w-full text-xs font-bold text-slate-900 focus:outline-none cursor-pointer"
-                          >
-                            <option value="">🌐 All Partner Restaurants (Browse Venues)</option>
-                            {restaurants.map((r) => (
-                              <option key={r._id} value={r._id}>
-                                📍 {r.name} — {r.city} ({r.tier === 'premium' ? 'Luxury Dining' : r.tier === 'mid' ? 'Casual Bistro' : 'Campus Canteen'})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
                       </div>
 
                       {/* Location, Date, Time, People Controls */}
@@ -173,34 +175,39 @@ export default function App() {
                         </div>
 
                         <div className="bg-[#FAF8F5] p-2.5 rounded-2xl border border-sand-200">
-                          <label className="block text-[10px] text-slate-400 font-bold uppercase">Time</label>
+                          <div className="flex items-center justify-between">
+                            <label className="block text-[10px] text-slate-400 font-bold uppercase">Time Slot</label>
+                            <button
+                              type="button"
+                              onClick={handleSetAsapTime}
+                              className="text-[9px] font-extrabold text-[#FF5722] hover:underline"
+                            >
+                              ⚡ Right Now
+                            </button>
+                          </div>
                           <div className="flex items-center gap-1.5 mt-1 font-bold text-slate-800">
-                            <Clock className="w-4 h-4 text-[#14382B]" />
-                            <select
+                            <Clock className="w-4 h-4 text-[#14382B] shrink-0" />
+                            <input
+                              type="text"
                               value={searchTime}
                               onChange={(e) => setSearchTime(e.target.value)}
-                              className="bg-transparent w-full focus:outline-none cursor-pointer text-xs"
-                            >
-                              <option value="7:00 PM">7:00 PM</option>
-                              <option value="8:00 PM">8:00 PM</option>
-                              <option value="1:00 PM">1:00 PM</option>
-                            </select>
+                              placeholder="e.g. 7:30 PM or ASAP"
+                              className="bg-transparent w-full focus:outline-none text-xs"
+                            />
                           </div>
                         </div>
 
                         <div className="bg-[#FAF8F5] p-2.5 rounded-2xl border border-sand-200">
-                          <label className="block text-[10px] text-slate-400 font-bold uppercase">People</label>
+                          <label className="block text-[10px] text-slate-400 font-bold uppercase">Guests / People</label>
                           <div className="flex items-center gap-1.5 mt-1 font-bold text-slate-800">
-                            <Users className="w-4 h-4 text-[#14382B]" />
-                            <select
+                            <Users className="w-4 h-4 text-[#14382B] shrink-0" />
+                            <input
+                              type="text"
                               value={searchGuests}
                               onChange={(e) => setSearchGuests(e.target.value)}
-                              className="bg-transparent w-full focus:outline-none cursor-pointer text-xs"
-                            >
-                              <option value="2 People">2 People</option>
-                              <option value="4 People">4 People</option>
-                              <option value="6 People">6 People</option>
-                            </select>
+                              placeholder="e.g. 2 People or 12"
+                              className="bg-transparent w-full focus:outline-none text-xs"
+                            />
                           </div>
                         </div>
 
@@ -208,17 +215,20 @@ export default function App() {
 
                       {/* Action Search Button */}
                       <button
-                        onClick={() => {
-                          if (selectedHeroRestaurant) {
-                            handleOpenDetail(selectedHeroRestaurant);
-                          } else {
-                            setCurrentTab('restaurants');
-                          }
-                        }}
+                        onClick={() => setCurrentTab('restaurants')}
                         className="w-full bg-[#D84315] hover:bg-[#BF360C] text-white py-3.5 rounded-2xl font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                       >
-                        <Utensils className="w-4 h-4" />
-                        {selectedHeroRestaurant ? 'Check Vacant Tables & Menu' : 'Find a Table & Pre-Order'}
+                        {searchMode === 'table' ? (
+                          <>
+                            <Utensils className="w-4 h-4" />
+                            Find Available Tables & Reserve
+                          </>
+                        ) : (
+                          <>
+                            <ShoppingBag className="w-4 h-4" />
+                            Pre-Order Food & Skip Queue
+                          </>
+                        )}
                       </button>
 
                       {/* Trust Badges */}
@@ -344,22 +354,20 @@ export default function App() {
               </div>
             </section>
 
-            {/* Promoted Partner Showcase (Popular Restaurants Section) */}
+            {/* Popular Places & Restaurants Section */}
             <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                 <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
-                      ⭐ Promoted Partner Showcase
-                    </span>
-                    <span className="text-[11px] text-slate-500 font-bold">Featured Venues</span>
-                  </div>
-                  <h2 className="text-2xl font-extrabold text-slate-900">Popular Partner Restaurants</h2>
+                  <h2 className="text-2xl font-extrabold text-slate-900">Popular Places & Restaurants</h2>
+                  <p className="text-xs text-slate-500 font-medium">Top rated dining venues & bistros near your location</p>
                 </div>
                 
                 <div className="flex items-center gap-2">
                   <button 
-                    onClick={() => setCurrentTab('restaurants')}
+                    onClick={() => {
+                      setCurrentTab('restaurants');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
                     className="text-xs font-bold text-[#D84315] hover:text-[#BF360C] flex items-center gap-1 transition-colors cursor-pointer bg-orange-50 px-3.5 py-2 rounded-xl border border-orange-200"
                   >
                     View All Restaurants <ChevronRight className="w-4 h-4" />
@@ -371,7 +379,6 @@ export default function App() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {[...restaurants]
                     .sort((a, b) => {
-                      // Sorted by Promoted -> Nearest -> Rating -> Price High to Low
                       if (b.rating !== a.rating) return b.rating - a.rating;
                       return (b.avgCostForTwo || 0) - (a.avgCostForTwo || 0);
                     })
@@ -379,7 +386,7 @@ export default function App() {
                       <div
                         key={rest._id}
                         onClick={() => handleOpenDetail(rest._id)}
-                        className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl border-2 border-amber-200/80 transition-all cursor-pointer group relative"
+                        className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl border border-sand-200 transition-all cursor-pointer group relative"
                       >
                         <div className="relative h-44 overflow-hidden bg-slate-100">
                           <img
@@ -388,17 +395,7 @@ export default function App() {
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           />
                           
-                          {/* Top Badges */}
-                          <div className="absolute top-2.5 left-2.5 flex flex-col gap-1">
-                            <span className="bg-[#D84315] text-white text-[9px] font-black px-2.5 py-0.5 rounded-full shadow uppercase tracking-wider">
-                              ⭐ PROMOTED PARTNER
-                            </span>
-                            <span className="bg-black/70 backdrop-blur-md text-amber-300 text-[9px] font-bold px-2 py-0.5 rounded-full border border-amber-400/40">
-                              Demo Partner Listing
-                            </span>
-                          </div>
-
-                          <span className="absolute bottom-2.5 left-2.5 bg-white/95 text-slate-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow">
+                          <span className="absolute top-3 left-3 bg-[#D84315] text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow uppercase">
                             {rest.discountPercent || 20}% OFF
                           </span>
                         </div>
@@ -423,7 +420,7 @@ export default function App() {
                           <div className="pt-2 border-t border-sand-100 flex items-center justify-between text-xs font-bold text-slate-700">
                             <span>₹{rest.avgCostForTwo || 800} <span className="text-[10px] text-slate-400 font-normal">for two</span></span>
                             <span className="text-[10px] text-[#14382B] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                              ~{(1.1 + index * 0.8).toFixed(1)} km away
+                              {(1.1 + index * 0.8).toFixed(1)} km away
                             </span>
                           </div>
                         </div>

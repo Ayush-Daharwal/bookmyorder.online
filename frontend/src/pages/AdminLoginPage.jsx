@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Lock, Mail, ArrowRight } from 'lucide-react';
+import { ShieldCheck, Lock, Mail, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { adminLoginApi } from '../services/api';
 
 export default function AdminLoginPage({ onLoginSuccess }) {
-  const [email, setEmail] = useState('support.bookmyorder.online@gmail.com');
-  const [password, setPassword] = useState('admin.bookmyorder@123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -52,6 +53,8 @@ export default function AdminLoginPage({ onLoginSuccess }) {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@bookmyorder.online"
+                autoComplete="off"
                 className="w-full pl-9 pr-3 py-3 rounded-xl border border-sand-200 bg-[#FAF8F5] focus:outline-none focus:ring-2 focus:ring-[#14382B] text-slate-800 font-bold"
               />
             </div>
@@ -62,19 +65,29 @@ export default function AdminLoginPage({ onLoginSuccess }) {
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-9 pr-3 py-3 rounded-xl border border-sand-200 bg-[#FAF8F5] focus:outline-none focus:ring-2 focus:ring-[#14382B] text-slate-800 font-bold"
+                placeholder="Enter password..."
+                autoComplete="new-password"
+                className="w-full pl-9 pr-10 py-3 rounded-xl border border-sand-200 bg-[#FAF8F5] focus:outline-none focus:ring-2 focus:ring-[#14382B] text-slate-800 font-bold"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 transition-colors"
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#14382B] hover:bg-[#1B4D36] text-white py-3.5 rounded-2xl font-extrabold text-sm shadow-lg transition-all flex items-center justify-center gap-2 mt-2"
+            className="w-full bg-[#14382B] hover:bg-[#1B4D36] text-white py-3.5 rounded-2xl font-extrabold text-sm shadow-lg transition-all flex items-center justify-center gap-2 mt-2 cursor-pointer"
           >
             {loading ? 'Authenticating...' : (
               <>
