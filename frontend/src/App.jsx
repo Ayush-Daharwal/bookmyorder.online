@@ -19,6 +19,7 @@ export default function App() {
   const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
 
   const [restaurants, setRestaurants] = useState([]);
+  const [selectedHeroRestaurant, setSelectedHeroRestaurant] = useState('');
   const [search, setSearch] = useState('');
   const [selectedTier, setSelectedTier] = useState('all');
 
@@ -120,6 +121,28 @@ export default function App() {
                         </button>
                       </div>
 
+                      {/* Restaurant Selection Dropdown (Select Venue to Check Tables & Menu) */}
+                      <div className="bg-[#FAF8F5] p-3 rounded-2xl border border-sand-200">
+                        <label className="block text-[10px] text-slate-400 font-extrabold uppercase tracking-wider mb-1">
+                          Select Specific Restaurant (To View Tables & Menu)
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <Utensils className="w-4 h-4 text-[#14382B] shrink-0" />
+                          <select
+                            value={selectedHeroRestaurant}
+                            onChange={(e) => setSelectedHeroRestaurant(e.target.value)}
+                            className="bg-transparent w-full text-xs font-bold text-slate-900 focus:outline-none cursor-pointer"
+                          >
+                            <option value="">🌐 All Partner Restaurants (Browse Venues)</option>
+                            {restaurants.map((r) => (
+                              <option key={r._id} value={r._id}>
+                                📍 {r.name} — {r.city} ({r.tier === 'premium' ? 'Luxury Dining' : r.tier === 'mid' ? 'Casual Bistro' : 'Campus Canteen'})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
                       {/* Location, Date, Time, People Controls */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                         
@@ -185,10 +208,17 @@ export default function App() {
 
                       {/* Action Search Button */}
                       <button
-                        onClick={() => setCurrentTab('restaurants')}
+                        onClick={() => {
+                          if (selectedHeroRestaurant) {
+                            handleOpenDetail(selectedHeroRestaurant);
+                          } else {
+                            setCurrentTab('restaurants');
+                          }
+                        }}
                         className="w-full bg-[#D84315] hover:bg-[#BF360C] text-white py-3.5 rounded-2xl font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                       >
-                        Find a Table
+                        <Utensils className="w-4 h-4" />
+                        {selectedHeroRestaurant ? 'Check Vacant Tables & Menu' : 'Find a Table & Pre-Order'}
                       </button>
 
                       {/* Trust Badges */}
@@ -314,64 +344,91 @@ export default function App() {
               </div>
             </section>
 
-            {/* Popular Restaurants Section */}
+            {/* Promoted Partner Showcase (Popular Restaurants Section) */}
             <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-              <div className="flex items-center justify-between mb-8">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                 <div>
-                  <h2 className="text-2xl font-extrabold text-slate-900">Popular Restaurants</h2>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                      ⭐ Promoted Partner Showcase
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-bold">Featured Venues</span>
+                  </div>
+                  <h2 className="text-2xl font-extrabold text-slate-900">Popular Partner Restaurants</h2>
                 </div>
                 
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={() => setCurrentTab('restaurants')}
-                    className="text-xs font-bold text-slate-600 hover:text-[#D84315] flex items-center gap-1 transition-colors cursor-pointer"
+                    className="text-xs font-bold text-[#D84315] hover:text-[#BF360C] flex items-center gap-1 transition-colors cursor-pointer bg-orange-50 px-3.5 py-2 rounded-xl border border-orange-200"
                   >
-                    View All <ChevronRight className="w-4 h-4" />
+                    View All Restaurants <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
               {restaurants.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {restaurants.map((rest) => (
-                    <div
-                      key={rest._id}
-                      onClick={() => handleOpenDetail(rest._id)}
-                      className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl border border-sand-200 transition-all cursor-pointer group"
-                    >
-                      <div className="relative h-44 overflow-hidden bg-slate-100">
-                        <img
-                          src={rest.photos?.[0] || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&q=80&w=800'}
-                          alt={rest.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                        <span className="absolute top-3 left-3 bg-[#D84315] text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow uppercase">
-                          {rest.discountPercent || 20}% OFF
-                        </span>
-                        <button className="absolute top-3 right-3 p-1.5 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors">
-                          <Heart className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                  {[...restaurants]
+                    .sort((a, b) => {
+                      // Sorted by Promoted -> Nearest -> Rating -> Price High to Low
+                      if (b.rating !== a.rating) return b.rating - a.rating;
+                      return (b.avgCostForTwo || 0) - (a.avgCostForTwo || 0);
+                    })
+                    .map((rest, index) => (
+                      <div
+                        key={rest._id}
+                        onClick={() => handleOpenDetail(rest._id)}
+                        className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl border-2 border-amber-200/80 transition-all cursor-pointer group relative"
+                      >
+                        <div className="relative h-44 overflow-hidden bg-slate-100">
+                          <img
+                            src={rest.photos?.[0] || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&q=80&w=800'}
+                            alt={rest.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                          
+                          {/* Top Badges */}
+                          <div className="absolute top-2.5 left-2.5 flex flex-col gap-1">
+                            <span className="bg-[#D84315] text-white text-[9px] font-black px-2.5 py-0.5 rounded-full shadow uppercase tracking-wider">
+                              ⭐ PROMOTED PARTNER
+                            </span>
+                            <span className="bg-black/70 backdrop-blur-md text-amber-300 text-[9px] font-bold px-2 py-0.5 rounded-full border border-amber-400/40">
+                              Demo Partner Listing
+                            </span>
+                          </div>
 
-                      <div className="p-4 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-bold text-slate-900 text-base group-hover:text-[#D84315] transition-colors truncate">
-                            {rest.name}
-                          </h3>
-                          <span className="text-xs font-bold text-[#14382B] flex items-center gap-0.5">
-                            ★ {rest.rating || 4.5}
+                          <span className="absolute bottom-2.5 left-2.5 bg-white/95 text-slate-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow">
+                            {rest.discountPercent || 20}% OFF
                           </span>
                         </div>
-                        
-                        <div className="flex items-center justify-between text-xs text-slate-500">
-                          <span className="truncate">{rest.tagline || 'Rooftop & Bistro'}</span>
-                          <span className="flex items-center gap-1 font-semibold">
-                            <MapPin className="w-3 h-3 text-[#D84315]" /> {rest.city}
-                          </span>
+
+                        <div className="p-4 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-bold text-slate-900 text-base group-hover:text-[#D84315] transition-colors truncate">
+                              {rest.name}
+                            </h3>
+                            <span className="text-xs font-bold text-[#14382B] flex items-center gap-0.5">
+                              ★ {rest.rating || 4.5}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center justify-between text-xs text-slate-500">
+                            <span className="truncate">{rest.tagline || 'Rooftop & Bistro'}</span>
+                            <span className="flex items-center gap-1 font-semibold text-slate-700">
+                              <MapPin className="w-3 h-3 text-[#D84315]" /> {rest.city}
+                            </span>
+                          </div>
+
+                          <div className="pt-2 border-t border-sand-100 flex items-center justify-between text-xs font-bold text-slate-700">
+                            <span>₹{rest.avgCostForTwo || 800} <span className="text-[10px] text-slate-400 font-normal">for two</span></span>
+                            <span className="text-[10px] text-[#14382B] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                              ~{(1.1 + index * 0.8).toFixed(1)} km away
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               ) : (
                 <div className="bg-white rounded-3xl p-12 text-center border border-sand-200 max-w-lg mx-auto">

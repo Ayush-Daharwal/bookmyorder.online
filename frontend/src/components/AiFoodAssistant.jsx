@@ -11,7 +11,7 @@ export default function AiFoodAssistant({ restaurantId }) {
   const [messages, setMessages] = useState([
     {
       sender: 'ai',
-      text: 'Namaste! I am bookmyorder AI 🤖. Ask me for smart dish recommendations, high protein meals, or budget pairings!',
+      text: 'Namaste! I am GourmetAI 🤖, your personal culinary & menu concierge. Ask me for smart dish recommendations, high-protein meals, chef specials, or budget pairings!',
     },
   ]);
 
@@ -69,7 +69,7 @@ export default function AiFoodAssistant({ restaurantId }) {
           className="bg-[#14382B] hover:bg-[#1B4D36] text-white p-4 rounded-full shadow-2xl border-2 border-[#FF5722] flex items-center gap-2.5 transition-all transform hover:scale-105 group"
         >
           <Bot className="w-6 h-6 text-[#FF5722] animate-bounce" />
-          <span className="font-extrabold text-xs tracking-wide hidden sm:inline">bookmyorder AI</span>
+          <span className="font-extrabold text-xs tracking-wide hidden sm:inline">GourmetAI</span>
         </button>
       )}
 
@@ -84,7 +84,7 @@ export default function AiFoodAssistant({ restaurantId }) {
                 <Bot className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-extrabold text-sm leading-tight">bookmyorder AI</h3>
+                <h3 className="font-extrabold text-sm leading-tight">GourmetAI Concierge</h3>
                 <p className="text-[10px] text-sand-200 flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-[#FF5722]" /> Powered by Gemini AI 1.5
                 </p>

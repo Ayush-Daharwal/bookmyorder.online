@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getRestaurantsApi } from '../services/api';
+import CustomCitySelect from '../components/CustomCitySelect';
 import { MapPin, Navigation, Search, Utensils, Star, Heart, SlidersHorizontal, Sparkles, Building2, Coffee, GraduationCap, ChevronDown } from 'lucide-react';
-
-const CITIES = ['Bhopal', 'Indore', 'Delhi', 'Mumbai', 'Bangalore', 'Pune', 'All Cities'];
 
 export default function RestaurantsPage({ onOpenDetail, initialCity = 'Bhopal' }) {
   const [selectedCity, setSelectedCity] = useState(initialCity || 'Bhopal');
@@ -58,9 +57,8 @@ export default function RestaurantsPage({ onOpenDetail, initialCity = 'Bhopal' }
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setIsDetectingLocation(false);
-        // Default to current city location (Bhopal) with coordinates
         setSelectedCity('Bhopal');
-        setLocationStatus('📍 Location detected: MP Nagar, Bhopal');
+        setLocationStatus('📍 GPS Location detected: MP Nagar, Bhopal');
         setTimeout(() => setLocationStatus(''), 4000);
       },
       (error) => {
@@ -77,7 +75,7 @@ export default function RestaurantsPage({ onOpenDetail, initialCity = 'Bhopal' }
     <div className="min-h-screen bg-[#FAF8F5] pb-16">
       
       {/* Header Banner */}
-      <section className="bg-[#14382B] text-white py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      <section className="bg-[#14382B] text-white pt-12 pb-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           
           <div className="space-y-2">
@@ -88,50 +86,29 @@ export default function RestaurantsPage({ onOpenDetail, initialCity = 'Bhopal' }
               Explore Top Restaurants Near You
             </h1>
             <p className="text-sand-200 text-sm max-w-xl">
-              Book your table in advance, pre-order handcrafted meals, or batch pick up at student canteens without waiting in queues.
+              Book your table in advance, pre-order handcrafted meals, or batch pick up at institutional dining without waiting in queues.
             </p>
           </div>
 
           {/* Location & GPS Detection Widget */}
-          <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/15 space-y-3 min-w-[280px]">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-sand-200 font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-[#FF5722]" /> Your Location
-              </span>
-              <button
-                onClick={handleDetectLocation}
-                disabled={isDetectingLocation}
-                className="text-xs font-bold bg-[#FF5722] hover:bg-[#D84315] text-white px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 shadow"
-              >
-                <Navigation className={`w-3.5 h-3.5 ${isDetectingLocation ? 'animate-spin' : ''}`} />
-                {isDetectingLocation ? 'Detecting...' : 'Detect GPS'}
-              </button>
-            </div>
-
-            {/* City Selector */}
-            <div className="relative">
-              <select
-                value={selectedCity}
-                onChange={(e) => setSelectedCity(e.target.value)}
-                className="w-full bg-white text-slate-900 text-sm font-bold py-2.5 px-3.5 pr-8 rounded-xl appearance-none cursor-pointer focus:outline-none shadow-sm"
-              >
-                {CITIES.map((c) => (
-                  <option key={c} value={c}>{c === 'All Cities' ? '🌐 All Cities' : `📍 ${c}`}</option>
-                ))}
-              </select>
-              <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3 top-3 pointer-events-none" />
-            </div>
+          <div className="w-full md:w-80 space-y-1">
+            <CustomCitySelect
+              selectedCity={selectedCity}
+              onSelectCity={(city) => setSelectedCity(city)}
+              onDetectGps={handleDetectLocation}
+              isDetecting={isDetectingLocation}
+            />
 
             {locationStatus && (
-              <p className="text-[11px] font-medium text-emerald-300 transition-all">{locationStatus}</p>
+              <p className="text-[11px] font-medium text-emerald-300 px-1 pt-1 transition-all">{locationStatus}</p>
             )}
           </div>
 
         </div>
       </section>
 
-      {/* Main Filter & Search Bar */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6">
+      {/* Main Filter & Search Bar Card - Fixed positioning to avoid overflow cutoff */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-20">
         <div className="bg-white rounded-3xl p-5 shadow-xl border border-sand-200 space-y-4">
           
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
@@ -168,12 +145,12 @@ export default function RestaurantsPage({ onOpenDetail, initialCity = 'Bhopal' }
 
           </div>
 
-          {/* Category / Tier Filter Pills */}
+          {/* Category / Tier Filter Pills with Professional Terminology */}
           <div className="flex items-center gap-2 overflow-x-auto pt-2 border-t border-sand-200 no-scrollbar">
             
             <button
               onClick={() => setSelectedTier('all')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 selectedTier === 'all'
                   ? 'bg-[#14382B] text-white shadow'
                   : 'bg-[#FAF8F5] text-slate-700 hover:bg-sand-100 border border-sand-200'
@@ -184,35 +161,35 @@ export default function RestaurantsPage({ onOpenDetail, initialCity = 'Bhopal' }
 
             <button
               onClick={() => setSelectedTier('premium')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 selectedTier === 'premium'
                   ? 'bg-[#14382B] text-white shadow'
                   : 'bg-[#FAF8F5] text-slate-700 hover:bg-sand-100 border border-sand-200'
               }`}
             >
-              <Building2 className="w-3.5 h-3.5 text-amber-500" /> Premium Fine Dining
+              <Building2 className="w-3.5 h-3.5 text-amber-500" /> Luxury & Fine Dining
             </button>
 
             <button
               onClick={() => setSelectedTier('mid')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 selectedTier === 'mid'
                   ? 'bg-[#14382B] text-white shadow'
                   : 'bg-[#FAF8F5] text-slate-700 hover:bg-sand-100 border border-sand-200'
               }`}
             >
-              <Coffee className="w-3.5 h-3.5 text-orange-500" /> Mid-range Bistro
+              <Coffee className="w-3.5 h-3.5 text-orange-500" /> Casual & Premium Bistros
             </button>
 
             <button
               onClick={() => setSelectedTier('canteen')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 selectedTier === 'canteen'
                   ? 'bg-[#14382B] text-white shadow'
                   : 'bg-[#FAF8F5] text-slate-700 hover:bg-sand-100 border border-sand-200'
               }`}
             >
-              <GraduationCap className="w-3.5 h-3.5 text-indigo-500" /> Campus Canteen
+              <GraduationCap className="w-3.5 h-3.5 text-indigo-500" /> Campus & Institutional Canteens
             </button>
 
           </div>
@@ -259,8 +236,8 @@ export default function RestaurantsPage({ onOpenDetail, initialCity = 'Bhopal' }
                         <span className="bg-[#D84315] text-white text-[11px] font-extrabold px-3 py-1 rounded-full shadow uppercase">
                           {rest.discountPercent || 20}% OFF
                         </span>
-                        <span className="bg-black/60 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-full capitalize">
-                          {rest.tier}
+                        <span className="bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
+                          {rest.tier === 'premium' ? 'Luxury Dining' : rest.tier === 'mid' ? 'Casual Bistro' : 'Campus Dining'}
                         </span>
                       </div>
 
