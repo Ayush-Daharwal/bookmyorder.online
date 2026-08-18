@@ -11,7 +11,11 @@ dotenv.config();
 
 const seedDatabase = async () => {
   try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://ayushdaharwal7_db_user:6e2Mq96kJ1sNTBdf@bookmyorder.1udcq53.mongodb.net/bookmyorder?retryWrites=true&w=majority';
+    const mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri) {
+      console.error('❌ Error: MONGODB_URI environment variable is missing in .env file.');
+      process.exit(1);
+    }
     await mongoose.connect(mongoUri);
     console.log('🌱 Connected to MongoDB Atlas for Seeding...');
 
