@@ -473,8 +473,8 @@ export default function App() {
 
       </main>
 
-      {/* Floating Gemini AI Assistant Widget */}
-      <AiFoodAssistant selectedRestaurantId={selectedRestaurantId} />
+      {/* Floating Shushi AI Assistant Widget */}
+      <AiFoodAssistant restaurantId={selectedRestaurantId} onOpenDetail={handleOpenDetail} />
 
       {/* Footer */}
       <Footer onOpenAdminLogin={() => setCurrentTab('admin')} />
