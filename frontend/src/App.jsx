@@ -7,6 +7,7 @@ import RestaurantDetailPage from './pages/RestaurantDetailPage';
 import CustomerProfilePage from './pages/CustomerProfilePage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import RestaurantsPage from './pages/RestaurantsPage';
 import AiFoodAssistant from './components/AiFoodAssistant';
 import { getMeApi, getRestaurantsApi } from './services/api';
 import { Store, Utensils, MapPin, Clock, Search, ShieldCheck, Calendar, Users, Heart, ShoppingBag, Tag, ChevronRight } from 'lucide-react';
@@ -184,8 +185,8 @@ export default function App() {
 
                       {/* Action Search Button */}
                       <button
-                        onClick={fetchRestaurants}
-                        className="w-full bg-[#D84315] hover:bg-[#BF360C] text-white py-3.5 rounded-2xl font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2"
+                        onClick={() => setCurrentTab('restaurants')}
+                        className="w-full bg-[#D84315] hover:bg-[#BF360C] text-white py-3.5 rounded-2xl font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                       >
                         Find a Table
                       </button>
@@ -321,7 +322,10 @@ export default function App() {
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <button className="text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1">
+                  <button 
+                    onClick={() => setCurrentTab('restaurants')}
+                    className="text-xs font-bold text-slate-600 hover:text-[#D84315] flex items-center gap-1 transition-colors cursor-pointer"
+                  >
                     View All <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -379,6 +383,13 @@ export default function App() {
             </section>
 
           </div>
+        )}
+
+        {currentTab === 'restaurants' && (
+          <RestaurantsPage
+            onOpenDetail={handleOpenDetail}
+            initialCity={location ? location.split(',')[0].trim() : 'Bhopal'}
+          />
         )}
 
         {currentTab === 'detail' && selectedRestaurantId && (

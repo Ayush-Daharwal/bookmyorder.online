@@ -32,8 +32,12 @@ export default function Navbar({ user, onOpenAuth, onLogout, currentTab, setCurr
           </button>
 
           <button
-            onClick={() => setCurrentTab('home')}
-            className="px-5 py-2 rounded-full text-sm font-semibold text-slate-700 hover:text-slate-900"
+            onClick={() => setCurrentTab('restaurants')}
+            className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
+              currentTab === 'restaurants' 
+                ? 'bg-[#14382B] text-white shadow' 
+                : 'text-slate-700 hover:text-slate-900'
+            }`}
           >
             Restaurants
           </button>

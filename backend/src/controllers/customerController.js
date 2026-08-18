@@ -4,14 +4,14 @@ import { TableBooking } from '../models/TableBooking.js';
 import { FoodOrder } from '../models/FoodOrder.js';
 import { Review } from '../models/Review.js';
 
-// @desc    Get All Restaurants with Filtering & Search
+// @desc    Get All Restaurants with Filtering, Search & Location Sorting
 // @route   GET /api/customer/restaurants
 export const getRestaurants = async (req, res) => {
   try {
-    const { city, tier, cuisine, search } = req.query;
+    const { city, tier, cuisine, search, sortBy } = req.query;
     let query = { isActive: true };
 
-    if (city) {
+    if (city && city.toLowerCase() !== 'all') {
       query.city = { $regex: city, $options: 'i' };
     }
     if (tier && ['premium', 'mid', 'canteen'].includes(tier)) {
@@ -24,11 +24,26 @@ export const getRestaurants = async (req, res) => {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
         { tagline: { $regex: search, $options: 'i' } },
+        { address: { $regex: search, $options: 'i' } },
+        { city: { $regex: search, $options: 'i' } },
         { cuisine: { $in: [new RegExp(search, 'i')] } },
       ];
     }
 
-    const restaurants = await Restaurant.find(query).sort({ rating: -1 });
+    let sortOptions = { rating: -1, ratingCount: -1 };
+    if (sortBy === 'rating') {
+      sortOptions = { rating: -1, ratingCount: -1 };
+    } else if (sortBy === 'cost_low') {
+      sortOptions = { avgCostForTwo: 1, rating: -1 };
+    } else if (sortBy === 'cost_high') {
+      sortOptions = { avgCostForTwo: -1, rating: -1 };
+    } else if (sortBy === 'discount') {
+      sortOptions = { discountPercent: -1, rating: -1 };
+    } else if (sortBy === 'recommended' || sortBy === 'nearest_rating') {
+      sortOptions = { rating: -1, discountPercent: -1 };
+    }
+
+    const restaurants = await Restaurant.find(query).sort(sortOptions);
     res.json({ success: true, count: restaurants.length, restaurants });
   } catch (error) {
     res.status(500).json({ message: error.message });
