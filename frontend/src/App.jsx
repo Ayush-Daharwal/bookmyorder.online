@@ -24,9 +24,10 @@ export default function App() {
   const [selectedTier, setSelectedTier] = useState('all');
 
   // Search Filter State (matching reference UI)
+  const getTodayString = () => new Date().toISOString().split('T')[0];
   const [searchMode, setSearchMode] = useState('table'); // 'table' or 'preorder'
   const [location, setLocation] = useState('Bhopal, MP');
-  const [searchDate, setSearchDate] = useState('2026-05-17');
+  const [searchDate, setSearchDate] = useState(getTodayString());
   const [searchTime, setSearchTime] = useState('7:00 PM');
   const [searchGuests, setSearchGuests] = useState('2 People');
 
@@ -443,6 +444,7 @@ export default function App() {
           <RestaurantsPage
             onOpenDetail={handleOpenDetail}
             initialCity={location ? location.split(',')[0].trim() : 'Bhopal'}
+            initialSearchMode={searchMode}
           />
         )}
 

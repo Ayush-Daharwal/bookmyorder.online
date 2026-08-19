@@ -8,10 +8,11 @@ import CashfreeCheckoutModal from '../components/CashfreeCheckoutModal';
 import DigitalReceiptModal from '../components/DigitalReceiptModal';
 
 export default function RestaurantDetailPage({ restaurantId, onBack, user, onOpenAuth }) {
+  const getTodayString = () => new Date().toISOString().split('T')[0];
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState('table_and_food'); // 'table_and_food', 'table_only', 'canteen_preorder'
-  const [bookingDate, setBookingDate] = useState(new Date().toISOString().split('T')[0]);
+  const [bookingDate, setBookingDate] = useState(getTodayString());
   const [timeSlot, setTimeSlot] = useState('07:30 PM');
   const [guestCount, setGuestCount] = useState(2);
   const [specialRequests, setSpecialRequests] = useState('');
@@ -190,48 +191,36 @@ export default function RestaurantDetailPage({ restaurantId, onBack, user, onOpe
         {/* Left 2 Cols: Mode Selector & Digital Menu UI */}
         <div className="lg:col-span-2 space-y-8">
           
-          {/* Mode Selector Header */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-sand-200">
-            <h3 className="font-extrabold text-forest-900 text-base mb-4">Choose Your Dining Workflow</h3>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-              <div
-                onClick={() => setMode('table_and_food')}
-                className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                  mode === 'table_and_food'
-                    ? 'border-terracotta-500 bg-terracotta-500/5 ring-2 ring-terracotta-500/20'
-                    : 'border-sand-200 hover:border-slate-300'
-                }`}
-              >
-                <p className="font-bold text-forest-900">Mode 1: Table + Food</p>
-                <p className="text-[11px] text-slate-500 mt-0.5">Prebook seat & pre-order dishes</p>
+          {/* Mode Info Banner (Manual Workflow Choice Removed as requested) */}
+          {restaurant.tier === 'canteen' ? (
+            <div className="bg-orange-50 border border-orange-200 rounded-3xl p-5 shadow-sm flex items-center justify-between">
+              <div>
+                <h3 className="font-extrabold text-[#D84315] text-base flex items-center gap-2">
+                  <ShoppingBag className="w-5 h-5 text-[#D84315]" /> Food Pre-Order & Quick Counter Pickup
+                </h3>
+                <p className="text-xs text-slate-600 mt-1">
+                  Campus & Institutional Canteen mode — Select your meal items below and pick up at the designated time. No table booking required.
+                </p>
               </div>
-
-              <div
-                onClick={() => setMode('table_only')}
-                className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                  mode === 'table_only'
-                    ? 'border-terracotta-500 bg-terracotta-500/5 ring-2 ring-terracotta-500/20'
-                    : 'border-sand-200 hover:border-slate-300'
-                }`}
-              >
-                <p className="font-bold text-forest-900">Mode 2: Table Only</p>
-                <p className="text-[11px] text-slate-500 mt-0.5">Reserve table; order food at runtime</p>
-              </div>
-
-              <div
-                onClick={() => setMode('canteen_preorder')}
-                className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                  mode === 'canteen_preorder'
-                    ? 'border-terracotta-500 bg-terracotta-500/5 ring-2 ring-terracotta-500/20'
-                    : 'border-sand-200 hover:border-slate-300'
-                }`}
-              >
-                <p className="font-bold text-forest-900">Mode 3: On-Demand Pickup</p>
-                <p className="text-[11px] text-slate-500 mt-0.5">Target pickup time (Canteen mode)</p>
-              </div>
+              <span className="bg-[#D84315] text-white text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider shadow whitespace-nowrap">
+                Pre-Order Only
+              </span>
             </div>
-          </div>
+          ) : (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-3xl p-5 shadow-sm flex items-center justify-between">
+              <div>
+                <h3 className="font-extrabold text-[#14382B] text-base flex items-center gap-2">
+                  <Utensils className="w-5 h-5 text-[#14382B]" /> Table Reservation & Pre-Order Menu
+                </h3>
+                <p className="text-xs text-slate-600 mt-1">
+                  Reserve your table and pre-order your favorite dishes ahead to enjoy zero wait time upon arrival.
+                </p>
+              </div>
+              <span className="bg-[#14382B] text-white text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider shadow whitespace-nowrap">
+                Table + Food
+              </span>
+            </div>
+          )}
 
           {/* Digital Menu Items */}
           {mode !== 'table_only' && (
@@ -312,7 +301,7 @@ export default function RestaurantDetailPage({ restaurantId, onBack, user, onOpe
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Time Slot</label>
+                <label className="block font-bold text-slate-700 mb-1">{mode === 'canteen_preorder' ? 'Pickup Time' : 'Time Slot'}</label>
                 <select
                   value={timeSlot}
                   onChange={(e) => setTimeSlot(e.target.value)}
@@ -326,24 +315,35 @@ export default function RestaurantDetailPage({ restaurantId, onBack, user, onOpe
                 </select>
               </div>
 
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Guest Count</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={guestCount}
-                  onChange={(e) => setGuestCount(parseInt(e.target.value))}
-                  className="w-full p-2.5 rounded-xl border border-sand-200 bg-sand-50 font-semibold text-slate-800"
-                />
-              </div>
+              {mode === 'canteen_preorder' ? (
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Assigned Table</label>
+                  <div className="w-full p-2 rounded-xl border border-orange-200 bg-orange-50 font-bold text-[#D84315] text-[11px] text-center">
+                    No table reservation
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Guest Count</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={guestCount}
+                    onChange={(e) => setGuestCount(parseInt(e.target.value))}
+                    className="w-full p-2.5 rounded-xl border border-sand-200 bg-sand-50 font-semibold text-slate-800"
+                  />
+                </div>
+              )}
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Special Table / Dining Request</label>
+              <label className="block font-bold text-slate-700 mb-1">
+                {mode === 'canteen_preorder' ? 'Special Instructions for Kitchen' : 'Special Table / Dining Request'}
+              </label>
               <input
                 type="text"
-                placeholder="e.g. Quiet corner table, high chair"
+                placeholder={mode === 'canteen_preorder' ? 'e.g. Keep extra napkins, pack separately' : 'e.g. Quiet corner table, high chair'}
                 value={specialRequests}
                 onChange={(e) => setSpecialRequests(e.target.value)}
                 className="w-full p-2.5 rounded-xl border border-sand-200 bg-sand-50"

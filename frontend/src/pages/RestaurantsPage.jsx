@@ -3,7 +3,7 @@ import { getRestaurantsApi } from '../services/api';
 import CustomCitySelect from '../components/CustomCitySelect';
 import { MapPin, Navigation, Search, Utensils, Star, Heart, SlidersHorizontal, Sparkles, Building2, Coffee, GraduationCap, ChevronDown } from 'lucide-react';
 
-export default function RestaurantsPage({ onOpenDetail, initialCity = 'Bhopal' }) {
+export default function RestaurantsPage({ onOpenDetail, initialCity = 'Bhopal', initialSearchMode = 'table' }) {
   const [selectedCity, setSelectedCity] = useState(initialCity || 'Bhopal');
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [locationStatus, setLocationStatus] = useState('');
@@ -22,7 +22,7 @@ export default function RestaurantsPage({ onOpenDetail, initialCity = 'Bhopal' }
 
   useEffect(() => {
     fetchData();
-  }, [selectedCity, selectedTier, sortBy, search]);
+  }, [selectedCity, selectedTier, sortBy, search, initialSearchMode]);
 
   const fetchData = async () => {
     try {
@@ -40,9 +40,19 @@ export default function RestaurantsPage({ onOpenDetail, initialCity = 'Bhopal' }
       if (sortBy) {
         params.sortBy = sortBy;
       }
+      if (initialSearchMode === 'table') {
+        params.hasTableBooking = 'true';
+      }
 
       const res = await getRestaurantsApi(params);
-      setRestaurants(res.data.restaurants || []);
+      let fetched = res.data.restaurants || [];
+
+      // Filter out canteens if table booking is required
+      if (initialSearchMode === 'table' && selectedTier === 'all') {
+        fetched = fetched.filter((r) => r.tier !== 'canteen');
+      }
+
+      setRestaurants(fetched);
     } catch (err) {
       console.error('Error fetching restaurants:', err);
     } finally {

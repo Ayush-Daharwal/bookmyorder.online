@@ -24,7 +24,7 @@ export const getRestaurantsApi = (params) => API.get('/customer/restaurants', { 
 export const getRestaurantDetailsApi = (id) => API.get(`/customer/restaurants/${id}`);
 export const getRestaurantByIdApi = (id) => API.get(`/customer/restaurants/${id}`);
 export const createBookingApi = (data) => API.post('/customer/bookings', data);
-export const getMyHistoryApi = () => API.get('/customer/history');
+export const getMyHistoryApi = () => API.get('/customer/my-history');
 export const addReviewApi = (data) => API.post('/customer/reviews', data);
 
 // Provider APIs

@@ -8,7 +8,7 @@ import { Review } from '../models/Review.js';
 // @route   GET /api/customer/restaurants
 export const getRestaurants = async (req, res) => {
   try {
-    const { city, tier, cuisine, search, sortBy } = req.query;
+    const { city, tier, cuisine, search, sortBy, hasTableBooking, searchMode } = req.query;
     let query = { isActive: true };
 
     if (city && city.toLowerCase() !== 'all') {
@@ -16,7 +16,11 @@ export const getRestaurants = async (req, res) => {
     }
     if (tier && ['premium', 'mid', 'canteen'].includes(tier)) {
       query.tier = tier;
+    } else if (hasTableBooking === 'true' || searchMode === 'table') {
+      // Exclude canteens when user specifically searches for table booking
+      query.tier = { $ne: 'canteen' };
     }
+
     if (cuisine) {
       query.cuisine = { $in: [new RegExp(cuisine, 'i')] };
     }
@@ -120,8 +124,8 @@ export const createBooking = async (req, res) => {
       });
     }
 
-    // Auto-assign table number
-    const tableNumber = 'Table T-' + (Math.floor(Math.random() * 12) + 1);
+    // Auto-assign table number or No table reservation for canteens
+    const tableNumber = mode === 'canteen_preorder' ? 'No table reservation' : 'Table T-' + (Math.floor(Math.random() * 12) + 1);
 
     const booking = await TableBooking.create({
       bookingId,

@@ -96,49 +96,82 @@ export default function CustomerProfilePage({ user, onOpenAuth }) {
           
           {history.bookings && history.bookings.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {history.bookings.map((b) => (
-                <div key={b._id} className="bg-white rounded-3xl p-5 shadow-sm border border-sand-200 space-y-3">
-                  <div className="flex items-center justify-between border-b border-sand-200 pb-3">
-                    <div>
-                      <span className="text-xs font-extrabold text-forest-800 bg-sand-100 px-3 py-1 rounded-full border border-sand-200">
-                        {b.bookingId}
+              {history.bookings.map((b) => {
+                const isCanteenOrNoTable = b.mode === 'canteen_preorder' || !b.tableNumber || b.tableNumber.toLowerCase().includes('no table');
+                const foodOrder = b.foodOrderId;
+
+                return (
+                  <div key={b._id} className="bg-white rounded-3xl p-5 shadow-sm border border-sand-200 space-y-3">
+                    <div className="flex items-center justify-between border-b border-sand-200 pb-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-extrabold text-forest-800 bg-sand-100 px-3 py-1 rounded-full border border-sand-200">
+                            {b.bookingId}
+                          </span>
+                          {foodOrder && (
+                            <span className="text-[10px] font-bold text-orange-800 bg-orange-100 px-2.5 py-0.5 rounded-full border border-orange-200">
+                              ₹{foodOrder.totalAmount} Paid
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="font-bold text-slate-800 text-base mt-2">{b.restaurantId?.name || 'Restaurant'}</h4>
+                        <p className="text-[11px] text-slate-500 font-medium">{b.restaurantId?.address || b.restaurantId?.city}</p>
+                      </div>
+                      <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full uppercase">
+                        {b.status}
                       </span>
-                      <h4 className="font-bold text-slate-800 text-base mt-2">{b.restaurantId?.name || 'Restaurant'}</h4>
                     </div>
-                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full uppercase">
-                      {b.status}
-                    </span>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
-                    <div>
-                      <p className="text-[11px] text-slate-400">Date & Slot</p>
-                      <p className="font-bold">{b.bookingDate} ({b.timeSlot})</p>
+                    <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 bg-sand-50 p-3 rounded-2xl border border-sand-200">
+                      <div>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase">Date & Slot</p>
+                        <p className="font-bold text-slate-800">{b.bookingDate}</p>
+                        <p className="text-[11px] text-slate-600 font-semibold">{b.timeSlot}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase">Assigned Table / Slot</p>
+                        {isCanteenOrNoTable ? (
+                          <p className="font-bold text-[#D84315]">No table reservation</p>
+                        ) : (
+                          <p className="font-bold text-emerald-800">{b.tableNumber} <span className="text-[10px] text-slate-500 font-normal">({b.guestCount} guests)</span></p>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-[11px] text-slate-400">Assigned Table</p>
-                      <p className="font-bold text-terracotta-600">{b.tableNumber} ({b.guestCount} guests)</p>
+
+                    {/* Pre-ordered items snippet */}
+                    {foodOrder && foodOrder.items && foodOrder.items.length > 0 && (
+                      <div className="text-xs text-slate-600 space-y-1 bg-white p-2.5 rounded-xl border border-sand-200">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Pre-Ordered Food Items</p>
+                        {foodOrder.items.map((it, idx) => (
+                          <div key={idx} className="flex justify-between items-center text-[11px]">
+                            <span className="font-semibold text-slate-700">
+                              {it.quantity}x {it.name} <span className="text-slate-400">({it.portion})</span>
+                            </span>
+                            <span className="font-bold text-slate-800">₹{it.price * it.quantity}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="pt-2 border-t border-sand-200 flex items-center justify-between text-xs">
+                      <button
+                        onClick={() => handleOpenReceipt(b, foodOrder)}
+                        className="bg-[#14382B] hover:bg-forest-900 text-white font-bold px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-sm"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-amber-400" />
+                        Digital Invoice & Bill
+                      </button>
+
+                      <button
+                        onClick={() => handleOpenReview(b.restaurantId?._id)}
+                        className="text-terracotta-600 hover:underline font-bold"
+                      >
+                        Rate & Review ★
+                      </button>
                     </div>
                   </div>
-
-                  <div className="pt-3 border-t border-sand-200 flex items-center justify-between text-xs">
-                    <button
-                      onClick={() => handleOpenReceipt(b, b.foodOrderId)}
-                      className="bg-sand-100 hover:bg-sand-200 text-forest-900 font-bold px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5"
-                    >
-                      <FileText className="w-3.5 h-3.5 text-terracotta-500" />
-                      Digital Invoice
-                    </button>
-
-                    <button
-                      onClick={() => handleOpenReview(b.restaurantId?._id)}
-                      className="text-terracotta-600 hover:underline font-bold"
-                    >
-                      Rate & Review ★
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="bg-white rounded-3xl p-8 text-center border border-sand-200 text-slate-500 text-xs">

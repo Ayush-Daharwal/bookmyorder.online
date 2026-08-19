@@ -57,7 +57,11 @@ export default function DigitalReceiptModal({ isOpen, onClose, booking, order })
               </div>
               <div>
                 <p className="text-slate-400 font-medium">Assigned Table / Slot</p>
-                <p className="font-bold text-terracotta-600">{booking.tableNumber} ({booking.timeSlot})</p>
+                <p className="font-bold text-terracotta-600">
+                  {booking.mode === 'canteen_preorder' || !booking.tableNumber || booking.tableNumber.toLowerCase().includes('no table')
+                    ? 'No table reservation'
+                    : `${booking.tableNumber} (${booking.timeSlot})`}
+                </p>
               </div>
             </>
           )}
