@@ -42,14 +42,19 @@ export default function RestaurantsPage({ onOpenDetail, initialCity = 'Bhopal', 
       }
       if (initialSearchMode === 'table') {
         params.hasTableBooking = 'true';
+        params.searchMode = 'table';
+      } else if (initialSearchMode === 'preorder') {
+        params.searchMode = 'preorder';
       }
 
       const res = await getRestaurantsApi(params);
       let fetched = res.data.restaurants || [];
 
-      // Filter out canteens if table booking is required
+      // Client side fallback filtering for mode-specific venue lists
       if (initialSearchMode === 'table' && selectedTier === 'all') {
         fetched = fetched.filter((r) => r.tier !== 'canteen');
+      } else if (initialSearchMode === 'preorder' && selectedTier === 'all') {
+        fetched = fetched.filter((r) => r.tier !== 'premium');
       }
 
       setRestaurants(fetched);

@@ -19,6 +19,9 @@ export const getRestaurants = async (req, res) => {
     } else if (hasTableBooking === 'true' || searchMode === 'table') {
       // Exclude canteens when user specifically searches for table booking
       query.tier = { $ne: 'canteen' };
+    } else if (searchMode === 'preorder' || req.query.preorderOnly === 'true') {
+      // Exclude premium fine-dining restaurants where table booking is compulsory
+      query.tier = { $in: ['mid', 'canteen'] };
     }
 
     if (cuisine) {
