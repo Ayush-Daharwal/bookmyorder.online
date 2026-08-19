@@ -20,7 +20,7 @@ export default function RestaurantDetailPage({ restaurantId, onBack, user, onOpe
   // Interactive Menu Filter & Search State
   const [menuSearch, setMenuSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Dishes');
-  const [vegOnly, setVegOnly] = useState(false);
+  const [dietaryFilter, setDietaryFilter] = useState('veg'); // 'veg' or 'nonveg'
   
   // Cart State for Food Items
   const [cart, setCart] = useState({}); // { itemId: { item, portion: 'full', quantity: 1, customNote: '' } }
@@ -267,17 +267,29 @@ export default function RestaurantDetailPage({ restaurantId, onBack, user, onOpe
                   )}
                 </div>
 
-                <button
-                  onClick={() => setVegOnly(!vegOnly)}
-                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs border transition-all cursor-pointer shrink-0 ${
-                    vegOnly
-                      ? 'bg-emerald-700 text-white border-emerald-700 shadow'
-                      : 'bg-white text-slate-700 border-sand-200 hover:bg-sand-100'
-                  }`}
-                >
-                  <span className={`w-2.5 h-2.5 rounded-full ${vegOnly ? 'bg-white' : 'bg-emerald-500'}`} />
-                  Veg Only
-                </button>
+                {restaurant.isPureVeg ? (
+                  <button
+                    disabled
+                    title="This restaurant is 100% Pure Veg"
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-extrabold text-xs bg-emerald-700 text-white border border-emerald-700 shadow shrink-0 cursor-default"
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-300 animate-pulse" />
+                    Pure Veg Only
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setDietaryFilter(dietaryFilter === 'veg' ? 'nonveg' : 'veg')}
+                    title="Click to toggle between Veg and Non-Veg menu"
+                    className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-extrabold text-xs border transition-all cursor-pointer shrink-0 shadow-md ${
+                      dietaryFilter === 'veg'
+                        ? 'bg-emerald-700 text-white border-emerald-700 hover:bg-emerald-800'
+                        : 'bg-rose-700 text-white border-rose-700 hover:bg-rose-800'
+                    }`}
+                  >
+                    <span className={`w-2.5 h-2.5 rounded-full ${dietaryFilter === 'veg' ? 'bg-emerald-300' : 'bg-rose-300'}`} />
+                    {dietaryFilter === 'veg' ? 'Veg Only 🟢' : 'Non-Veg Only 🔴'}
+                  </button>
+                )}
               </div>
 
               {/* Dynamic Category Filter Pills */}
@@ -320,8 +332,10 @@ export default function RestaurantDetailPage({ restaurantId, onBack, user, onOpe
                   if (selectedCategory !== 'All Dishes' && item.category !== selectedCategory) {
                     return false;
                   }
-                  if (vegOnly && !item.isVeg) {
-                    return false;
+                  if (restaurant.isPureVeg || dietaryFilter === 'veg') {
+                    if (!item.isVeg) return false;
+                  } else if (dietaryFilter === 'nonveg') {
+                    if (item.isVeg) return false;
                   }
                   if (menuSearch) {
                     const q = menuSearch.toLowerCase();
@@ -340,7 +354,7 @@ export default function RestaurantDetailPage({ restaurantId, onBack, user, onOpe
                       <p className="font-bold text-slate-800 text-sm">No dishes found matching your filter.</p>
                       <p className="text-xs text-slate-500">Try clearing your search query or selecting a different category pill above.</p>
                       <button
-                        onClick={() => { setMenuSearch(''); setSelectedCategory('All Dishes'); setVegOnly(false); }}
+                        onClick={() => { setMenuSearch(''); setSelectedCategory('All Dishes'); setDietaryFilter('veg'); }}
                         className="mt-2 text-xs font-extrabold text-[#D84315] hover:underline"
                       >
                         Reset All Filters

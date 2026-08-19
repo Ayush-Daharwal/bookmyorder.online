@@ -63,6 +63,7 @@ const seedDatabase = async () => {
         ownerId: providerUser._id,
         name: 'Sky Lounge Rooftop & Bistro',
         tier: 'premium',
+        isPureVeg: false,
         tagline: 'Scenic City View Dining & Fine Fusion Cuisine',
         description: 'Bhopal finest rooftop experience offering panoramic lake views, gourmet continental, and authentic North Indian dishes.',
         address: '10th Floor, DB City Mall Commercial Block, Maharana Pratap Nagar',
@@ -81,6 +82,7 @@ const seedDatabase = async () => {
         ownerId: providerUser._id,
         name: 'The Spice House',
         tier: 'mid',
+        isPureVeg: false,
         tagline: 'Authentic Mughlai & Tandoori Specialties',
         description: 'Rich gravy curries, charcoal tandoori platters, and soft garlic naan baked in traditional clay oven.',
         address: 'Plot 42, Arera Colony, Near Bittan Market',
@@ -99,6 +101,7 @@ const seedDatabase = async () => {
         ownerId: providerUser._id,
         name: 'Café Aroma Italian & Coffee Bar',
         tier: 'mid',
+        isPureVeg: true,
         tagline: 'Woodfired Pizza, Creamy Pastas & Artisan Brews',
         description: 'Cozy European style bistro serving handcrafted espresso drinks, woodfired sourdough pizza, and tiramisu.',
         address: 'Shop 12, Gulmohar Colony, E-8 Arera',
@@ -117,6 +120,7 @@ const seedDatabase = async () => {
         ownerId: providerUser._id,
         name: 'MANIT Central College Canteen',
         tier: 'canteen',
+        isPureVeg: true,
         tagline: 'Skip Student Queue - Pre-Order & Batch Pickup',
         description: 'Official student canteen for MANIT Bhopal. Pre-order roll, samosa, cold coffee, and thali with exact batch target pickup time.',
         address: 'MANIT Campus Complex, Link Road 3',
@@ -143,10 +147,12 @@ const seedDatabase = async () => {
     const manitCanteen = seededRestaurants[3];
 
     const menuData = [
-      // Sky Lounge Menu (Fine Dining Fusion & Multi-Cuisine)
+      // Sky Lounge Menu (Veg & Non-Veg Multi-Cuisine)
       { restaurantId: skyLounge._id, name: 'Paneer Tikka Angara', category: 'Starters', isVeg: true, halfPrice: 190, fullPrice: 340, pricing: { default: 340, half: 190, full: 340 }, description: 'Charcoal grilled cottage cheese marinated in spiced yogurt and mustard oil.', tags: ['Bestseller', 'Chef Special'], image: 'https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?auto=format&fit=crop&q=80&w=400' },
+      { restaurantId: skyLounge._id, name: 'Murg Angara Tikka', category: 'Starters', isVeg: false, halfPrice: 220, fullPrice: 390, pricing: { default: 390, half: 220, full: 390 }, description: 'Succulent chicken morsels roasted in fiery tandoor spices and clarified butter.', tags: ['Chef Special'], image: 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?auto=format&fit=crop&q=80&w=400' },
       { restaurantId: skyLounge._id, name: 'Crispy Veg Chilli Corn Basket', category: 'Starters', isVeg: true, halfPrice: 160, fullPrice: 280, pricing: { default: 280, half: 160, full: 280 }, description: 'Golden fried sweetcorn kernels tossed with scallions and Schezwan garlic spice.', tags: ['Crispy'], image: 'https://images.unsplash.com/photo-1541544741938-0af808871cc0?auto=format&fit=crop&q=80&w=400' },
       { restaurantId: skyLounge._id, name: 'Dal Makhani Shahi', category: 'Main Course', isVeg: true, halfPrice: 180, fullPrice: 320, pricing: { default: 320, half: 180, full: 320 }, description: 'Slow cooked black lentils simmered overnight with white butter and cream.', tags: ['Signature'], image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&q=80&w=400' },
+      { restaurantId: skyLounge._id, name: 'Butter Chicken Shahi', category: 'Main Course', isVeg: false, halfPrice: 240, fullPrice: 420, pricing: { default: 420, half: 240, full: 420 }, description: 'Tandoori chicken simmered in rich creamy tomato butter cashew gravy.', tags: ['Signature', 'Bestseller'], image: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&q=80&w=400' },
       { restaurantId: skyLounge._id, name: 'Paneer Butter Masala', category: 'Main Course', isVeg: true, halfPrice: 190, fullPrice: 350, pricing: { default: 350, half: 190, full: 350 }, description: 'Tender cottage cheese cubes simmered in velvety tomato cashew gravy.', tags: ['Popular'], image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&q=80&w=400' },
       { restaurantId: skyLounge._id, name: 'Exotic Farmhouse Woodfired Pizza', category: 'Italian', isVeg: true, halfPrice: 260, fullPrice: 450, pricing: { default: 450, half: 260, full: 450 }, description: 'Fresh mozzarella, bell peppers, jalapenos, olives, and sundried tomatoes on artisanal dough.', tags: ['Woodfired'], image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=400' },
       { restaurantId: skyLounge._id, name: 'Veg Hakka Noodles', category: 'Chinese', isVeg: true, halfPrice: 140, fullPrice: 240, pricing: { default: 240, half: 140, full: 240 }, description: 'Wok tossed noodles with shredded capsicum, cabbage, and light soya sauce.', tags: ['Wok Fresh'], image: 'https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&q=80&w=400' },
@@ -155,19 +161,20 @@ const seedDatabase = async () => {
 
       // Spice House Menu (North Indian, Mughlai & South Indian)
       { restaurantId: spiceHouse._id, name: 'Kadai Paneer Khas', category: 'Main Course', isVeg: true, halfPrice: 160, fullPrice: 290, pricing: { default: 290, half: 160, full: 290 }, description: 'Cottage cheese tossed with wok-roasted coriander seeds and capsicum.', tags: ['Spicy'], image: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&q=80&w=400' },
+      { restaurantId: spiceHouse._id, name: 'Mughlai Chicken Dum Biryani', category: 'Main Course', isVeg: false, halfPrice: 190, fullPrice: 340, pricing: { default: 340, half: 190, full: 340 }, description: 'Long grain basmati rice layered with tender marinated chicken and saffron dum steam.', tags: ['Dum Biryani'], image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&q=80&w=400' },
       { restaurantId: spiceHouse._id, name: 'Crispy Veg Manchurian Gravy', category: 'Chinese', isVeg: true, halfPrice: 150, fullPrice: 260, pricing: { default: 260, half: 150, full: 260 }, description: 'Vegetable dumplings simmered in dark garlic ginger soya glaze.', tags: ['Indo-Chinese'], image: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&q=80&w=400' },
       { restaurantId: spiceHouse._id, name: 'Special Masala Dosa', category: 'South Indian', isVeg: true, halfPrice: 90, fullPrice: 160, pricing: { default: 160, half: 90, full: 160 }, description: 'Crispy rice crepe filled with tempered spiced potato masala, served with coconut chutney and hot sambhar.', tags: ['South Special'], image: 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?auto=format&fit=crop&q=80&w=400' },
       { restaurantId: spiceHouse._id, name: 'Steamed Button Idli (4 Pcs)', category: 'South Indian', isVeg: true, halfPrice: 60, fullPrice: 110, pricing: { default: 110, half: 60, full: 110 }, description: 'Soft fluffy steamed rice cakes served with tomato red chutney and gun powder ghee.', tags: ['Healthy'], image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&q=80&w=400' },
       { restaurantId: spiceHouse._id, name: 'Butter Tandoori Roti', category: 'Breads', isVeg: true, halfPrice: 20, fullPrice: 35, pricing: { default: 35, half: 20, full: 35 }, description: 'Whole wheat bread baked crisp in tandoor with ghee glaze.', tags: ['Essential'], image: 'https://images.unsplash.com/photo-1626074353765-517a681e40be?auto=format&fit=crop&q=80&w=400' },
       { restaurantId: spiceHouse._id, name: 'Gulab Jamun with Rabri (2 Pcs)', category: 'Desserts', isVeg: true, halfPrice: 70, fullPrice: 130, pricing: { default: 130, half: 70, full: 130 }, description: 'Warm khoya dumplings soaked in saffron cardamom syrup topped with thickened rabri.', tags: ['Traditional'], image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&q=80&w=400' },
 
-      // Café Aroma Menu (Italian, Espresso & Continental)
+      // Café Aroma Menu (Pure Veg European & Coffee)
       { restaurantId: cafeAroma._id, name: 'Creamy Alfredo Penne Pasta', category: 'Main Course', isVeg: true, halfPrice: 170, fullPrice: 280, pricing: { default: 280, half: 170, full: 280 }, description: 'Italian penne tossed in rich parmesan garlic cream sauce with sauteed broccoli.', tags: ['Italian'], image: 'https://images.unsplash.com/photo-1621996346565-e3d5d6281270?auto=format&fit=crop&q=80&w=400' },
       { restaurantId: cafeAroma._id, name: 'Arrabbiata Spicy Tomato Pasta', category: 'Main Course', isVeg: true, halfPrice: 160, fullPrice: 270, pricing: { default: 270, half: 160, full: 270 }, description: 'Penne tossed in fiery San Marzano tomato sauce, fresh basil, and crushed chilli flakes.', tags: ['Spicy'], image: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&q=80&w=400' },
       { restaurantId: cafeAroma._id, name: 'Hazelnut Cold Brew Coffee', category: 'Beverages', isVeg: true, halfPrice: 110, fullPrice: 180, pricing: { default: 180, half: 110, full: 180 }, description: 'Steeped 18-hour cold brew coffee infused with roasted hazelnut syrup and cold foam.', tags: ['Refreshing'], image: 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&q=80&w=400' },
       { restaurantId: cafeAroma._id, name: 'Classic Iced Cappuccino', category: 'Beverages', isVeg: true, halfPrice: 90, fullPrice: 150, pricing: { default: 150, half: 90, full: 150 }, description: 'Double shot dark espresso shaken with ice and cold milk foam.', tags: ['Cold Coffee'], image: 'https://images.unsplash.com/photo-1572442388796-11668ba67e53?auto=format&fit=crop&q=80&w=400' },
 
-      // MANIT Canteen Menu (Campus Quick Eats & Snacks)
+      // MANIT Canteen Menu (Pure Veg Campus Eats)
       { restaurantId: manitCanteen._id, name: 'Special Cheese Paneer Roll', category: 'Snacks', isVeg: true, halfPrice: 70, fullPrice: 120, pricing: { default: 120, half: 70, full: 120 }, description: 'Flaky paratha stuffed with spiced paneer cubes, grated cheese, and tangy mint chutney.', tags: ['Student Fav'], image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&q=80&w=400' },
       { restaurantId: manitCanteen._id, name: 'Crispy Samosa Chaat (2 Pcs)', category: 'Snacks', isVeg: true, halfPrice: 40, fullPrice: 70, pricing: { default: 70, half: 40, full: 70 }, description: 'Crushed potato samosas topped with spicy chole, sweet tamarind chutney, and nylon sev.', tags: ['Street Style'], image: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&q=80&w=400' },
       { restaurantId: manitCanteen._id, name: 'Veg Fried Rice with Manchurian', category: 'Chinese', isVeg: true, halfPrice: 80, fullPrice: 140, pricing: { default: 140, half: 80, full: 140 }, description: 'Aromatic wok fried rice paired with 3 pcs hot gravy Manchurian.', tags: ['Combo Meal'], image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&q=80&w=400' },

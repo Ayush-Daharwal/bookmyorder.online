@@ -87,6 +87,10 @@ const restaurantSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    isPureVeg: {
+      type: Boolean,
+      default: false,
+    },
     modesSupported: {
       mode1TableAndFood: { type: Boolean, default: true },
       mode2TableOnly: { type: Boolean, default: true },

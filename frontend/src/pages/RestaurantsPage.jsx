@@ -249,12 +249,20 @@ export default function RestaurantsPage({ onOpenDetail, initialCity = 'Bhopal', 
                       />
 
                       {/* Top Overlay Badges */}
-                      <div className="absolute top-3 left-3 flex items-center gap-2">
+                      <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5">
                         <span className="bg-[#D84315] text-white text-[11px] font-extrabold px-3 py-1 rounded-full shadow uppercase">
                           {rest.discountPercent || 20}% OFF
                         </span>
                         <span className="bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
                           {rest.tier === 'premium' ? 'Luxury Dining' : rest.tier === 'mid' ? 'Casual Bistro' : 'Campus Dining'}
+                        </span>
+                        <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow backdrop-blur-md flex items-center gap-1 ${
+                          rest.isPureVeg
+                            ? 'bg-emerald-600/90 text-white'
+                            : 'bg-rose-600/90 text-white'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${rest.isPureVeg ? 'bg-emerald-200' : 'bg-rose-200'}`} />
+                          {rest.isPureVeg ? 'Pure Veg' : 'Veg & Non-Veg'}
                         </span>
                       </div>
 
