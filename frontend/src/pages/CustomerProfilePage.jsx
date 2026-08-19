@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Calendar, Clock, ShoppingBag, Star, ShieldCheck, CheckCircle2, FileText, Check, Edit3, Mail, LogOut, Lock, Sparkles, Send } from 'lucide-react';
+import { User, Calendar, Clock, ShoppingBag, Star, ShieldCheck, CheckCircle2, FileText, Check, Edit3, Mail, LogOut, Lock, Sparkles, Send, Camera } from 'lucide-react';
 import { getMyHistoryApi, addReviewApi, updateProfileApi, requestEmailOtpApi, verifyEmailOtpApi } from '../services/api';
 import DigitalReceiptModal from '../components/DigitalReceiptModal';
 
@@ -14,16 +14,18 @@ export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUser
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editName, setEditName] = useState(user?.name || '');
   const [editCity, setEditCity] = useState(user?.city || 'Bhopal');
-  const [editAvatar, setEditAvatar] = useState(user?.avatar || '');
 
-  // Email OTP Verification State
-  const [emailInput, setEmailInput] = useState(user?.email || '');
+  // Email OTP Verification State (default empty input for placeholder)
+  const [emailInput, setEmailInput] = useState('');
   const [emailOtpStep, setEmailOtpStep] = useState('input'); // 'input', 'otp_sent'
   const [emailOtpCode, setEmailOtpCode] = useState('');
   const [simulatedEmailOtp, setSimulatedEmailOtp] = useState('');
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [otpMessage, setOtpMessage] = useState('');
+
+  // Logout Confirmation State
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Review Form State
   const [reviewModal, setReviewModal] = useState({ isOpen: false, restaurantId: null, rating: 5, comment: '' });
@@ -75,13 +77,62 @@ export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUser
       const res = await updateProfileApi({
         name: editName,
         city: editCity,
-        avatar: editAvatar,
       });
       alert('Profile details updated successfully!');
       if (onUserUpdate) onUserUpdate(res.data.user);
       setIsEditingProfile(false);
     } catch (err) {
       alert(err.response?.data?.message || 'Profile update failed');
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        // Resize image to max 400x400 for fast, lightweight loading
+        const canvas = document.createElement('canvas');
+        const maxSize = 400;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxSize) {
+            height = Math.round((height * maxSize) / width);
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width = Math.round((width * maxSize) / height);
+            height = maxSize;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const resizedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+        uploadAvatar(resizedBase64);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const uploadAvatar = async (base64Image) => {
+    try {
+      const res = await updateProfileApi({ avatar: base64Image });
+      if (onUserUpdate) onUserUpdate(res.data.user);
+      alert('🎉 Profile picture updated successfully!');
+    } catch (err) {
+      console.error('Avatar upload error:', err);
+      alert(err.response?.data?.message || 'Failed to update profile picture.');
     }
   };
 
@@ -147,13 +198,39 @@ export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUser
       <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-sand-200 space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pb-6 border-b border-sand-200">
           <div className="flex items-center gap-4">
-            <div className="relative w-20 h-20 rounded-full overflow-hidden border-4 border-sand-100 shadow-md shrink-0 bg-[#14382B] text-white flex items-center justify-center font-extrabold text-2xl">
-              {user.avatar ? (
-                <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-              ) : (
-                <span>{user.name ? user.name.charAt(0).toUpperCase() : 'U'}</span>
-              )}
+            
+            {/* Clickable Profile DP Avatar with WhatsApp-Style Green Camera Badge */}
+            <div className="relative inline-block">
+              <div
+                onClick={() => document.getElementById('profile-dp-file-input').click()}
+                title="Click to upload/change profile photo"
+                className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-4 border-sand-100 shadow-md shrink-0 bg-[#14382B] text-white flex items-center justify-center font-extrabold text-2xl cursor-pointer group hover:opacity-95 transition-opacity"
+              >
+                {user.avatar ? (
+                  <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span>{user.name ? user.name.charAt(0).toUpperCase() : 'U'}</span>
+                )}
+              </div>
+
+              {/* WhatsApp-Style Floating Green Camera Circle Icon */}
+              <button
+                type="button"
+                onClick={() => document.getElementById('profile-dp-file-input').click()}
+                title="Upload Profile Photo"
+                className="absolute bottom-0 right-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-slate-900 shadow-lg border-2 border-white flex items-center justify-center transition-transform hover:scale-110 cursor-pointer z-10"
+              >
+                <Camera className="w-4 h-4 text-slate-900 stroke-[2.5]" />
+              </button>
             </div>
+
+            <input
+              id="profile-dp-file-input"
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
 
             <div className="space-y-1">
               <div className="flex items-center gap-2">
@@ -171,7 +248,7 @@ export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUser
               <p className="text-xs text-slate-500 font-semibold">+91 {user.phone} • {user.city}</p>
               <p className="text-xs text-slate-600 font-medium flex items-center gap-1">
                 <Mail className="w-3.5 h-3.5 text-terracotta-500" />
-                {user.email || 'No email added yet'}
+                {user.email || 'Email not verified yet'}
               </p>
             </div>
           </div>
@@ -189,7 +266,7 @@ export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUser
         {isEditingProfile && (
           <form onSubmit={handleSaveProfile} className="bg-sand-50 p-5 rounded-2xl border border-sand-200 space-y-4 text-xs">
             <h4 className="font-extrabold text-forest-900 text-sm">Edit Personal Information</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Full Name</label>
                 <input
@@ -208,17 +285,6 @@ export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUser
                   required
                   value={editCity}
                   onChange={(e) => setEditCity(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-sand-200 bg-white font-semibold text-slate-800"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Profile DP Avatar URL</label>
-                <input
-                  type="text"
-                  placeholder="https://..."
-                  value={editAvatar}
-                  onChange={(e) => setEditAvatar(e.target.value)}
                   className="w-full p-2.5 rounded-xl border border-sand-200 bg-white font-semibold text-slate-800"
                 />
               </div>
@@ -258,7 +324,7 @@ export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUser
               <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="email"
-                  placeholder="Enter your email (e.g. diner@example.com)"
+                  placeholder="abc@gmail.com"
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
                   className="flex-1 p-2.5 rounded-xl border border-sand-200 bg-white font-semibold text-slate-800 text-xs"
@@ -465,13 +531,45 @@ export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUser
       {/* Red Logout Action at the very bottom of profile */}
       <div className="pt-6 border-t border-sand-300">
         <button
-          onClick={onLogout}
+          onClick={() => setShowLogoutConfirm(true)}
           className="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold py-4 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
         >
           <LogOut className="w-5 h-5" />
           Logout from Account
         </button>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl text-center space-y-4 border border-sand-200">
+            <div className="w-14 h-14 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto shadow-inner">
+              <LogOut className="w-7 h-7" />
+            </div>
+            <div>
+              <h3 className="text-lg font-extrabold text-slate-900">Do you want to log out?</h3>
+              <p className="text-xs text-slate-500 mt-1">You will need to sign in again with your mobile number or admin credentials.</p>
+            </div>
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 py-3 px-4 rounded-xl bg-sand-100 hover:bg-sand-200 font-bold text-slate-700 text-xs transition-all cursor-pointer"
+              >
+                No, Stay Logged In
+              </button>
+              <button
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  onLogout();
+                }}
+                className="flex-1 py-3 px-4 rounded-xl bg-red-600 hover:bg-red-700 font-extrabold text-white text-xs shadow-md transition-all cursor-pointer"
+              >
+                Yes, Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

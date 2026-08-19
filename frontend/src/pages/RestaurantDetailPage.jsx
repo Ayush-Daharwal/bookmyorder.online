@@ -369,11 +369,32 @@ export default function RestaurantDetailPage({ restaurantId, onBack, user, onOpe
                       <div key={item._id} className="bg-white rounded-3xl p-4 shadow-sm border border-sand-200 flex flex-col justify-between space-y-3 hover:shadow-md transition-shadow">
                         <div className="flex gap-3">
                           <img src={item.image} alt={item.name} className="w-20 h-20 rounded-2xl object-cover shrink-0" />
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className={`w-2.5 h-2.5 rounded-full ${item.isVeg ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                              <h4 className="font-bold text-forest-900 text-sm">{item.name}</h4>
+                          <div className="space-y-1 flex-1">
+                            <div className="flex items-start justify-between gap-1.5">
+                              <div className="flex items-center gap-1.5">
+                                {/* Standard Veg / Non-Veg Square Icon */}
+                                <span
+                                  title={item.isVeg ? 'Pure Veg Dish' : 'Non-Veg Dish'}
+                                  className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center shrink-0 ${
+                                    item.isVeg ? 'border-emerald-600 bg-emerald-50' : 'border-rose-600 bg-rose-50'
+                                  }`}
+                                >
+                                  <span className={`w-2 h-2 rounded-full ${item.isVeg ? 'bg-emerald-600' : 'bg-rose-600'}`} />
+                                </span>
+                                <h4 className="font-bold text-forest-900 text-sm leading-snug">{item.name}</h4>
+                              </div>
+
+                              <span
+                                className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md border shrink-0 uppercase tracking-wider ${
+                                  item.isVeg
+                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                    : 'bg-rose-50 text-rose-800 border-rose-200'
+                                }`}
+                              >
+                                {item.isVeg ? '🟢 Veg' : '🔴 Non-Veg'}
+                              </span>
                             </div>
+
                             <span className="inline-block text-[10px] font-bold text-slate-500 bg-sand-100 px-2 py-0.5 rounded-md">
                               {item.category || 'Main Course'}
                             </span>
