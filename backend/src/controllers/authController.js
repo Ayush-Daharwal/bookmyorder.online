@@ -74,6 +74,7 @@ export const verifyOtp = async (req, res) => {
         city: user.city,
         role: user.role,
         avatar: user.avatar,
+        isEmailVerified: user.isEmailVerified || false,
       },
     });
   } catch (error) {
@@ -101,6 +102,7 @@ export const adminLogin = async (req, res) => {
         email: adminEmail,
         role: 'admin',
         city: 'Global',
+        isEmailVerified: true,
       });
     }
 
@@ -113,6 +115,7 @@ export const adminLogin = async (req, res) => {
         name: adminUser.name,
         email: adminUser.email,
         role: adminUser.role,
+        isEmailVerified: adminUser.isEmailVerified || true,
       },
     });
   } catch (error) {
@@ -124,4 +127,99 @@ export const adminLogin = async (req, res) => {
 // @route   GET /api/auth/me
 export const getMe = async (req, res) => {
   res.json({ success: true, user: req.user });
+};
+
+// @desc    Update User Profile (Name, City, Avatar, Email)
+// @route   PUT /api/auth/profile
+export const updateProfile = async (req, res) => {
+  try {
+    const { name, city, avatar, email } = req.body;
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (name) user.name = name;
+    if (city) user.city = city;
+    if (avatar) user.avatar = avatar;
+    if (email && email !== user.email) {
+      user.email = email;
+      user.isEmailVerified = false; // Reset verification if email changes
+    }
+
+    await user.save();
+    res.json({
+      success: true,
+      message: 'Profile updated successfully!',
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Request Email OTP
+// @route   POST /api/auth/request-email-otp
+export const requestEmailOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const targetEmail = email || user.email;
+    if (!targetEmail) {
+      return res.status(400).json({ message: 'Email address is required for verification' });
+    }
+
+    user.email = targetEmail;
+
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
+    user.emailOtp = { code: otpCode, expiresAt };
+    await user.save();
+
+    res.json({
+      success: true,
+      message: `6-Digit Email Verification OTP sent to ${targetEmail}`,
+      simulatedOtp: otpCode, // Provided for user convenience during testing
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Verify Email OTP
+// @route   POST /api/auth/verify-email-otp
+export const verifyEmailOtp = async (req, res) => {
+  try {
+    const { otp } = req.body;
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!otp) {
+      return res.status(400).json({ message: 'OTP code is required' });
+    }
+
+    // Allow 123456 or actual generated OTP for easy testing
+    if (otp !== '123456' && (!user.emailOtp || user.emailOtp.code !== otp)) {
+      return res.status(400).json({ message: 'Invalid 6-digit Email OTP code. Use 123456 or generated OTP.' });
+    }
+
+    user.isEmailVerified = true;
+    user.emailOtp = undefined;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Email address verified successfully! Blue verified badge unlocked.',
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };

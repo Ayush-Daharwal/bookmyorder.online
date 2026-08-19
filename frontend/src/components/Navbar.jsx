@@ -74,29 +74,40 @@ export default function Navbar({ user, onOpenAuth, onLogout, currentTab, setCurr
         {/* User Account / Sign In */}
         <div className="flex items-center gap-3">
           {user ? (
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-[#FAF8F5] px-3.5 py-1.5 rounded-full border border-sand-200">
-                <div className="w-8 h-8 rounded-full bg-[#14382B] text-white flex items-center justify-center font-bold text-xs">
-                  {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                </div>
-                <div className="text-xs">
-                  <p className="font-bold text-slate-800 leading-tight">{user.name}</p>
-                  <p className="text-[#FF5722] font-medium capitalize leading-none">{user.role}</p>
-                </div>
+            <button
+              onClick={() => setCurrentTab('profile')}
+              title="Click to view My Profile & Settings"
+              className={`flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border transition-all cursor-pointer group ${
+                currentTab === 'profile'
+                  ? 'bg-[#14382B] text-white border-[#14382B] shadow-md'
+                  : 'bg-[#FAF8F5] hover:bg-sand-100 text-slate-800 border-sand-200 shadow-sm'
+              }`}
+            >
+              <div className="relative w-9 h-9 rounded-full overflow-hidden border-2 border-white shadow-sm shrink-0 bg-[#14382B] text-white flex items-center justify-center font-extrabold text-sm">
+                {user.avatar ? (
+                  <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span>{user.name ? user.name.charAt(0).toUpperCase() : 'U'}</span>
+                )}
               </div>
-              
-              <button
-                onClick={onLogout}
-                title="Logout"
-                className="p-2 text-slate-500 hover:text-red-600 transition-colors rounded-full hover:bg-red-50"
-              >
-                <LogOut className="w-5 h-5" />
-              </button>
-            </div>
+              <div className="text-left text-xs">
+                <div className="flex items-center gap-1 font-bold leading-tight">
+                  <span className="truncate max-w-[110px]">{user.name}</span>
+                  {user.isEmailVerified && (
+                    <span title="Verified Diner Account" className="text-sky-500 font-extrabold text-xs">
+                      ✔
+                    </span>
+                  )}
+                </div>
+                <p className={`text-[10px] font-medium leading-none mt-0.5 ${currentTab === 'profile' ? 'text-sand-200' : 'text-[#FF5722]'}`}>
+                  View Profile
+                </p>
+              </div>
+            </button>
           ) : (
             <button
               onClick={onOpenAuth}
-              className="bg-[#14382B] hover:bg-[#1B4D36] text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow transition-all flex items-center gap-2"
+              className="bg-[#14382B] hover:bg-[#1B4D36] text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow transition-all flex items-center gap-2 cursor-pointer"
             >
               <User className="w-4 h-4" />
               Login / Sign Up

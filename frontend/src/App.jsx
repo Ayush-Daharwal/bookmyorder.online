@@ -472,7 +472,12 @@ export default function App() {
         )}
 
         {currentTab === 'profile' && (
-          <CustomerProfilePage user={user} onOpenAuth={() => setIsAuthOpen(true)} />
+          <CustomerProfilePage
+            user={user}
+            onOpenAuth={() => setIsAuthOpen(true)}
+            onLogout={handleLogout}
+            onUserUpdate={(updatedUser) => setUser(updatedUser)}
+          />
         )}
 
         {currentTab === 'admin' && (

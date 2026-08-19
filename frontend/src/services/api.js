@@ -18,6 +18,9 @@ export const requestOtpApi = (phone) => API.post('/auth/request-otp', { phone })
 export const verifyOtpApi = (data) => API.post('/auth/verify-otp', data);
 export const getMeApi = () => API.get('/auth/me');
 export const adminLoginApi = (data) => API.post('/auth/admin-login', data);
+export const updateProfileApi = (data) => API.put('/auth/profile', data);
+export const requestEmailOtpApi = (email) => API.post('/auth/request-email-otp', { email });
+export const verifyEmailOtpApi = (data) => API.post('/auth/verify-email-otp', data);
 
 // Customer APIs
 export const getRestaurantsApi = (params) => API.get('/customer/restaurants', { params });
