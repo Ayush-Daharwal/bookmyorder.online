@@ -611,6 +611,8 @@ export default function RestaurantDetailPage({ restaurantId, onBack, user, onOpe
         onClose={() => setIsReceiptOpen(false)}
         booking={createdBooking}
         order={createdOrder}
+        restaurant={restaurant}
+        user={user}
       />
 
     </div>

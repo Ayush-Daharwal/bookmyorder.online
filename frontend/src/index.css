@@ -17,3 +17,46 @@
 .gradient-orange-btn:hover {
   background: linear-gradient(135deg, #BF360C 0%, #D84315 100%);
 }
+
+/* Official Print Receipt Styles: Ensures printed bill is a clean paper invoice, NOT a web UI screenshot */
+@media print {
+  @page {
+    margin: 6mm;
+    size: auto;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  #shushi-ai-widget,
+  .no-print,
+  button,
+  header,
+  footer,
+  nav,
+  .modal-backdrop {
+    display: none !important;
+  }
+
+  .printable-paper-receipt-container,
+  .printable-paper-receipt-container * {
+    visibility: visible !important;
+  }
+
+  .printable-paper-receipt-container {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 720px !important;
+    margin: 0 auto !important;
+    padding: 10px !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}

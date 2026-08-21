@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { User, Calendar, Clock, ShoppingBag, Star, ShieldCheck, CheckCircle2, FileText, Check, Edit3, Mail, LogOut, Lock, Sparkles, Send, Camera } from 'lucide-react';
+import { User, Calendar, Clock, ShoppingBag, Star, ShieldCheck, CheckCircle2, FileText, Check, Edit3, Mail, LogOut, Lock, Sparkles, Send, Camera, Download } from 'lucide-react';
 import { getMyHistoryApi, addReviewApi, updateProfileApi, requestEmailOtpApi, verifyEmailOtpApi } from '../services/api';
 import DigitalReceiptModal from '../components/DigitalReceiptModal';
+import { downloadPdfBill } from '../utils/pdfGenerator';
 
 export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUserUpdate }) {
   const [history, setHistory] = useState({ bookings: [], orders: [] });
@@ -396,13 +397,20 @@ export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUser
                             {b.bookingId}
                           </span>
                           {foodOrder && (
-                            <span className="text-[10px] font-bold text-orange-800 bg-orange-100 px-2.5 py-0.5 rounded-full border border-orange-200">
-                              ₹{foodOrder.totalAmount} Paid
+                            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                              ₹{foodOrder.totalAmount} Paid (UPI/Card)
                             </span>
                           )}
                         </div>
                         <h4 className="font-bold text-slate-800 text-base mt-2">{b.restaurantId?.name || 'Restaurant'}</h4>
                         <p className="text-[11px] text-slate-500 font-medium">{b.restaurantId?.address || b.restaurantId?.city}</p>
+                        
+                        {(b.restaurantId?.licenses?.fssaiNumber || b.restaurantId?.fssaiLicenseNumber || b.restaurantId?.licenses?.gstin || b.restaurantId?.gstin) && (
+                          <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                            {b.restaurantId?.licenses?.fssaiNumber || b.restaurantId?.fssaiLicenseNumber ? `FSSAI: ${b.restaurantId?.licenses?.fssaiNumber || b.restaurantId?.fssaiLicenseNumber}` : ''}
+                            {(b.restaurantId?.licenses?.gstin || b.restaurantId?.gstin) ? ` • GSTIN: ${b.restaurantId?.licenses?.gstin || b.restaurantId?.gstin}` : ''}
+                          </p>
+                        )}
                       </div>
                       <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full uppercase">
                         {b.status}
@@ -440,18 +448,28 @@ export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUser
                       </div>
                     )}
 
-                    <div className="pt-2 border-t border-sand-200 flex items-center justify-between text-xs">
-                      <button
-                        onClick={() => handleOpenReceipt(b, foodOrder)}
-                        className="bg-[#14382B] hover:bg-forest-900 text-white font-bold px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-sm"
-                      >
-                        <FileText className="w-3.5 h-3.5 text-amber-400" />
-                        Digital Invoice & Bill
-                      </button>
+                    <div className="pt-2 border-t border-sand-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => downloadPdfBill({ booking: b, order: foodOrder, restaurant: b.restaurantId, user })}
+                          className="gradient-orange-btn text-white font-extrabold px-3.5 py-2 rounded-xl transition-all flex items-center gap-1 shadow-sm text-xs cursor-pointer"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          Download Bill (PDF)
+                        </button>
+
+                        <button
+                          onClick={() => handleOpenReceipt(b, foodOrder)}
+                          className="bg-[#14382B] hover:bg-forest-900 text-white font-bold px-3 py-2 rounded-xl transition-all flex items-center gap-1 text-xs cursor-pointer"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-amber-400" />
+                          View Receipt
+                        </button>
+                      </div>
 
                       <button
                         onClick={() => handleOpenReview(b.restaurantId?._id)}
-                        className="text-terracotta-600 hover:underline font-bold"
+                        className="text-terracotta-600 hover:underline font-bold text-xs"
                       >
                         Rate & Review ★
                       </button>
@@ -527,6 +545,8 @@ export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUser
         onClose={() => setIsReceiptOpen(false)}
         booking={selectedBooking}
         order={selectedOrder}
+        restaurant={selectedBooking?.restaurantId || selectedOrder?.restaurantId}
+        user={user}
       />
       {/* Red Logout Action at the very bottom of profile */}
       <div className="pt-6 border-t border-sand-300">

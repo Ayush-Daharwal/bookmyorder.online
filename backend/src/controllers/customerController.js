@@ -144,11 +144,17 @@ export const createBooking = async (req, res) => {
       status: 'confirmed',
     });
 
+    const populatedBooking = await TableBooking.findById(booking._id).populate('restaurantId', 'name tier address photos city tagline licenses fssaiLicenseNumber gstin');
+    let populatedFoodOrder = null;
+    if (foodOrder) {
+      populatedFoodOrder = await FoodOrder.findById(foodOrder._id).populate('restaurantId', 'name tier address photos city tagline licenses fssaiLicenseNumber gstin');
+    }
+
     res.json({
       success: true,
       message: 'Booking request created successfully!',
-      booking,
-      foodOrder,
+      booking: populatedBooking,
+      foodOrder: populatedFoodOrder || foodOrder,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -160,12 +166,12 @@ export const createBooking = async (req, res) => {
 export const getMyHistory = async (req, res) => {
   try {
     const bookings = await TableBooking.find({ userId: req.user._id })
-      .populate('restaurantId', 'name tier address photos city tagline')
+      .populate('restaurantId', 'name tier address photos city tagline licenses fssaiLicenseNumber gstin')
       .populate('foodOrderId')
       .sort({ createdAt: -1 });
 
     const orders = await FoodOrder.find({ userId: req.user._id })
-      .populate('restaurantId', 'name tier address photos city')
+      .populate('restaurantId', 'name tier address photos city tagline licenses fssaiLicenseNumber gstin')
       .sort({ createdAt: -1 });
 
     res.json({ success: true, bookings, orders });
