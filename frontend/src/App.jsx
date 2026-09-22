@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import AuthModal from './components/AuthModal';
+import PastTimeModal from './components/PastTimeModal';
 import ProviderPortal from './pages/ProviderPortal';
 import RestaurantDetailPage from './pages/RestaurantDetailPage';
 import CustomerProfilePage from './pages/CustomerProfilePage';
@@ -10,11 +11,13 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import RestaurantsPage from './pages/RestaurantsPage';
 import AiFoodAssistant from './components/AiFoodAssistant';
 import { getMeApi, getRestaurantsApi } from './services/api';
+import { getNearestFutureSlot, isPastDateTime } from './utils/dateUtils';
 import { Store, Utensils, MapPin, Clock, Search, ShieldCheck, Calendar, Users, Heart, ShoppingBag, Tag, ChevronRight } from 'lucide-react';
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isPastTimeModalOpen, setIsPastTimeModalOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState('home'); // 'home', 'detail', 'provider', 'profile', 'admin'
   const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
 
@@ -28,8 +31,15 @@ export default function App() {
   const [searchMode, setSearchMode] = useState('table'); // 'table' or 'preorder'
   const [location, setLocation] = useState('Bhopal, MP');
   const [searchDate, setSearchDate] = useState(getTodayString());
-  const [searchTime, setSearchTime] = useState('7:00 PM');
+  const [searchTime, setSearchTime] = useState('07:30 PM');
   const [searchGuests, setSearchGuests] = useState('2 People');
+  const nearestFutureSlot = getNearestFutureSlot();
+
+  const handleSelectNearestTime = () => {
+    setSearchDate(nearestFutureSlot.date);
+    setSearchTime(nearestFutureSlot.time);
+    setIsPastTimeModalOpen(false);
+  };
 
   const handleSetAsapTime = () => {
     const now = new Date();
@@ -59,6 +69,8 @@ export default function App() {
   const fetchRestaurants = async () => {
     try {
       const params = {};
+      const city = location.split(',')[0].trim();
+      if (city) params.city = city;
       if (selectedTier !== 'all') params.tier = selectedTier;
       if (search) params.search = search;
       const res = await getRestaurantsApi(params);
@@ -167,10 +179,17 @@ export default function App() {
                           <div className="flex items-center gap-1.5 mt-1 font-bold text-slate-800">
                             <Calendar className="w-4 h-4 text-[#14382B]" />
                             <input
-                              type="text"
+                              type="date"
                               value={searchDate}
-                              onChange={(e) => setSearchDate(e.target.value)}
-                              className="bg-transparent w-full focus:outline-none text-xs"
+                              min={getTodayString()}
+                              onChange={(e) => {
+                                const newDate = e.target.value;
+                                setSearchDate(newDate);
+                                if (isPastDateTime(newDate, searchTime)) {
+                                  setIsPastTimeModalOpen(true);
+                                }
+                              }}
+                              className="bg-transparent w-full focus:outline-none text-xs font-bold cursor-pointer"
                             />
                           </div>
                         </div>
@@ -192,8 +211,19 @@ export default function App() {
                               type="text"
                               value={searchTime}
                               onChange={(e) => setSearchTime(e.target.value)}
-                              placeholder="e.g. 7:30 PM or ASAP"
-                              className="bg-transparent w-full focus:outline-none text-xs"
+                              onBlur={() => {
+                                if (isPastDateTime(searchDate, searchTime)) {
+                                  setIsPastTimeModalOpen(true);
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && isPastDateTime(searchDate, searchTime)) {
+                                  setIsPastTimeModalOpen(true);
+                                }
+                              }}
+                              placeholder="e.g. 07:30 PM"
+                              className="bg-transparent w-full min-w-0 focus:outline-none text-xs font-bold"
+                              aria-label="Enter booking time"
                             />
                           </div>
                         </div>
@@ -216,7 +246,13 @@ export default function App() {
 
                       {/* Action Search Button */}
                       <button
-                        onClick={() => setCurrentTab('restaurants')}
+                        onClick={() => {
+                          if (isPastDateTime(searchDate, searchTime)) {
+                            setIsPastTimeModalOpen(true);
+                            return;
+                          }
+                          setCurrentTab('restaurants');
+                        }}
                         className="w-full bg-[#D84315] hover:bg-[#BF360C] text-white py-3.5 rounded-2xl font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                       >
                         {searchMode === 'table' ? (
@@ -455,6 +491,9 @@ export default function App() {
             onOpenDetail={handleOpenDetail}
             initialCity={location ? location.split(',')[0].trim() : 'Bhopal'}
             initialSearchMode={searchMode}
+            initialDate={searchDate}
+            initialTime={searchTime}
+            initialGuests={searchGuests}
           />
         )}
 
@@ -464,6 +503,9 @@ export default function App() {
             onBack={() => setCurrentTab('home')}
             user={user}
             onOpenAuth={() => setIsAuthOpen(true)}
+            initialDate={searchDate}
+            initialTime={searchTime}
+            initialGuests={searchGuests}
           />
         )}
 
@@ -504,6 +546,17 @@ export default function App() {
           setUser(u);
           fetchRestaurants();
         }}
+      />
+
+      {/* Past Time Modal */}
+      <PastTimeModal
+        isOpen={isPastTimeModalOpen}
+        onClose={() => setIsPastTimeModalOpen(false)}
+        selectedDate={searchDate}
+        selectedTime={searchTime}
+        nearestDate={nearestFutureSlot.date}
+        nearestTime={nearestFutureSlot.time}
+        onSelectNearestTime={handleSelectNearestTime}
       />
 
     </div>

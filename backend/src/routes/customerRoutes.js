@@ -2,6 +2,7 @@ import express from 'express';
 import {
   getRestaurants,
   getRestaurantById,
+  checkRestaurantAvailability,
   createBooking,
   getMyHistory,
   addReview,
@@ -11,6 +12,7 @@ import { protect } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 router.get('/restaurants', getRestaurants);
+router.get('/restaurants/:id/check-availability', checkRestaurantAvailability);
 router.get('/restaurants/:id', getRestaurantById);
 router.post('/bookings', protect, createBooking);
 router.get('/my-history', protect, getMyHistory);

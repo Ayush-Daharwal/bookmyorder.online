@@ -3,19 +3,41 @@ import {
   Utensils, Calendar, Clock, Users, ShieldCheck, MapPin, ChevronLeft,
   Plus, Minus, ShoppingBag, CheckCircle2, AlertCircle, Sparkles, MessageSquare, Search, Filter
 } from 'lucide-react';
-import { getRestaurantByIdApi, createBookingApi } from '../services/api';
+import { getRestaurantByIdApi, createBookingApi, checkRestaurantAvailabilityApi } from '../services/api';
 import CashfreeCheckoutModal from '../components/CashfreeCheckoutModal';
 import DigitalReceiptModal from '../components/DigitalReceiptModal';
+import PastTimeModal from '../components/PastTimeModal';
+import TableUnavailableModal from '../components/TableUnavailableModal';
+import { isPastDateTime } from '../utils/dateUtils';
 
-export default function RestaurantDetailPage({ restaurantId, onBack, user, onOpenAuth }) {
+export default function RestaurantDetailPage({
+  restaurantId,
+  onBack,
+  user,
+  onOpenAuth,
+  initialDate,
+  initialTime,
+  initialGuests,
+}) {
   const getTodayString = () => new Date().toISOString().split('T')[0];
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState('table_and_food'); // 'table_and_food', 'table_only', 'canteen_preorder'
-  const [bookingDate, setBookingDate] = useState(getTodayString());
-  const [timeSlot, setTimeSlot] = useState('07:30 PM');
-  const [guestCount, setGuestCount] = useState(2);
+  const [bookingDate, setBookingDate] = useState(initialDate || getTodayString());
+  const [timeSlot, setTimeSlot] = useState(initialTime || '07:30 PM');
+  const [guestCount, setGuestCount] = useState(initialGuests ? parseInt(initialGuests) || 2 : 2);
   const [specialRequests, setSpecialRequests] = useState('');
+
+  // Modals for Past Time & Fully Booked Table
+  const [isPastTimeModalOpen, setIsPastTimeModalOpen] = useState(false);
+  const [isTableUnavailableModalOpen, setIsTableUnavailableModalOpen] = useState(false);
+  const [nearestSlots, setNearestSlots] = useState(['08:00 PM', '08:30 PM', '09:00 PM']);
+
+  useEffect(() => {
+    if (initialDate) setBookingDate(initialDate);
+    if (initialTime) setTimeSlot(initialTime);
+    if (initialGuests) setGuestCount(parseInt(initialGuests) || 2);
+  }, [initialDate, initialTime, initialGuests]);
   
   // Interactive Menu Filter & Search State
   const [menuSearch, setMenuSearch] = useState('');
@@ -80,6 +102,32 @@ export default function RestaurantDetailPage({ restaurantId, onBack, user, onOpe
     });
   };
 
+  const handleCheckSlotAvailability = async (date, time) => {
+    if (mode === 'canteen_preorder') return;
+    if (isPastDateTime(date, time)) {
+      setIsPastTimeModalOpen(true);
+      return;
+    }
+    try {
+      const res = await checkRestaurantAvailabilityApi(restaurantId, { date, time });
+      if (res.data && res.data.isAvailable === false) {
+        setNearestSlots(res.data.nearestSlots || ['08:00 PM', '08:30 PM', '09:00 PM']);
+        setIsTableUnavailableModalOpen(true);
+      }
+    } catch (err) {
+      console.error('Check availability error:', err);
+    }
+  };
+
+  const handleSelectNearestTime = (slot) => {
+    setTimeSlot(slot);
+    setIsTableUnavailableModalOpen(false);
+    const elem = document.getElementById('digital-menu-section');
+    if (elem) {
+      elem.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   // Calculate Subtotal & Taxes
   const cartItemsList = Object.values(cart);
   const subtotal = cartItemsList.reduce((sum, entry) => {
@@ -93,6 +141,11 @@ export default function RestaurantDetailPage({ restaurantId, onBack, user, onOpe
   const handleInitiateBooking = async () => {
     if (!user) {
       onOpenAuth();
+      return;
+    }
+
+    if (isPastDateTime(bookingDate, timeSlot)) {
+      setIsPastTimeModalOpen(true);
       return;
     }
 
@@ -121,7 +174,12 @@ export default function RestaurantDetailPage({ restaurantId, onBack, user, onOpe
       setCreatedOrder(res.data.foodOrder);
       setIsCheckoutOpen(true);
     } catch (err) {
-      alert(err.response?.data?.message || 'Booking initiation failed');
+      if (err.response?.data?.isFullyBooked) {
+        setNearestSlots(err.response.data.nearestSlots || ['08:00 PM', '08:30 PM', '09:00 PM']);
+        setIsTableUnavailableModalOpen(true);
+      } else {
+        alert(err.response?.data?.message || 'Booking initiation failed');
+      }
     }
   };
 
@@ -191,7 +249,7 @@ export default function RestaurantDetailPage({ restaurantId, onBack, user, onOpe
       </div>
 
       {/* Grid: 3-Mode Booking Engine & Digital Menu */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div id="digital-menu-section" className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Left 2 Cols: Mode Selector & Digital Menu UI */}
         <div className="lg:col-span-2 space-y-8">
@@ -455,8 +513,17 @@ export default function RestaurantDetailPage({ restaurantId, onBack, user, onOpe
               <input
                 type="date"
                 value={bookingDate}
-                onChange={(e) => setBookingDate(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-sand-200 bg-sand-50 font-semibold text-slate-800"
+                min={getTodayString()}
+                onChange={(e) => {
+                  const newDate = e.target.value;
+                  setBookingDate(newDate);
+                  if (isPastDateTime(newDate, timeSlot)) {
+                    setIsPastTimeModalOpen(true);
+                  } else {
+                    handleCheckSlotAvailability(newDate, timeSlot);
+                  }
+                }}
+                className="w-full p-2.5 rounded-xl border border-sand-200 bg-sand-50 font-semibold text-slate-800 cursor-pointer"
               />
             </div>
 
@@ -465,14 +532,30 @@ export default function RestaurantDetailPage({ restaurantId, onBack, user, onOpe
                 <label className="block font-bold text-slate-700 mb-1">{mode === 'canteen_preorder' ? 'Pickup Time' : 'Time Slot'}</label>
                 <select
                   value={timeSlot}
-                  onChange={(e) => setTimeSlot(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-sand-200 bg-sand-50 font-semibold text-slate-800"
+                  onChange={(e) => {
+                    const newTime = e.target.value;
+                    setTimeSlot(newTime);
+                    if (isPastDateTime(bookingDate, newTime)) {
+                      setIsPastTimeModalOpen(true);
+                    } else {
+                      handleCheckSlotAvailability(bookingDate, newTime);
+                    }
+                  }}
+                  className="w-full p-2.5 rounded-xl border border-sand-200 bg-sand-50 font-semibold text-slate-800 cursor-pointer"
                 >
                   <option value="01:00 PM">01:00 PM (Lunch)</option>
+                  <option value="01:30 PM">01:30 PM (Lunch)</option>
                   <option value="02:00 PM">02:00 PM (Lunch)</option>
+                  <option value="02:30 PM">02:30 PM (Lunch)</option>
+                  <option value="07:00 PM">07:00 PM (Dinner)</option>
                   <option value="07:30 PM">07:30 PM (Dinner)</option>
+                  <option value="08:00 PM">08:00 PM (Dinner)</option>
                   <option value="08:30 PM">08:30 PM (Dinner)</option>
+                  <option value="09:00 PM">09:00 PM (Dinner)</option>
                   <option value="09:30 PM">09:30 PM (Dinner)</option>
+                  {!['01:00 PM', '01:30 PM', '02:00 PM', '02:30 PM', '07:00 PM', '07:30 PM', '08:00 PM', '08:30 PM', '09:00 PM', '09:30 PM'].includes(timeSlot) && (
+                    <option value={timeSlot}>{timeSlot}</option>
+                  )}
                 </select>
               </div>
 
@@ -613,6 +696,25 @@ export default function RestaurantDetailPage({ restaurantId, onBack, user, onOpe
         order={createdOrder}
         restaurant={restaurant}
         user={user}
+      />
+
+      {/* Past Time Modal */}
+      <PastTimeModal
+        isOpen={isPastTimeModalOpen}
+        onClose={() => setIsPastTimeModalOpen(false)}
+        selectedDate={bookingDate}
+        selectedTime={timeSlot}
+      />
+
+      {/* Table Unavailable / Fully Booked Slot Modal */}
+      <TableUnavailableModal
+        isOpen={isTableUnavailableModalOpen}
+        onClose={() => setIsTableUnavailableModalOpen(false)}
+        restaurantName={restaurant.name}
+        requestedTime={timeSlot}
+        requestedDate={bookingDate}
+        nearestSlots={nearestSlots}
+        onSelectNearestTime={handleSelectNearestTime}
       />
 
     </div>

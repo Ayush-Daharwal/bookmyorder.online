@@ -3,7 +3,14 @@ import { getRestaurantsApi } from '../services/api';
 import CustomCitySelect from '../components/CustomCitySelect';
 import { MapPin, Navigation, Search, Utensils, Star, Heart, SlidersHorizontal, Sparkles, Building2, Coffee, GraduationCap, ChevronDown } from 'lucide-react';
 
-export default function RestaurantsPage({ onOpenDetail, initialCity = 'Bhopal', initialSearchMode = 'table' }) {
+export default function RestaurantsPage({
+  onOpenDetail,
+  initialCity = 'Bhopal',
+  initialSearchMode = 'table',
+  initialDate,
+  initialTime,
+  initialGuests,
+}) {
   const [selectedCity, setSelectedCity] = useState(initialCity || 'Bhopal');
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [locationStatus, setLocationStatus] = useState('');
@@ -22,7 +29,7 @@ export default function RestaurantsPage({ onOpenDetail, initialCity = 'Bhopal', 
 
   useEffect(() => {
     fetchData();
-  }, [selectedCity, selectedTier, sortBy, search, initialSearchMode]);
+  }, [selectedCity, selectedTier, sortBy, search, initialSearchMode, initialDate, initialTime]);
 
   const fetchData = async () => {
     try {
@@ -46,6 +53,9 @@ export default function RestaurantsPage({ onOpenDetail, initialCity = 'Bhopal', 
       } else if (initialSearchMode === 'preorder') {
         params.searchMode = 'preorder';
       }
+
+      if (initialDate) params.bookingDate = initialDate;
+      if (initialTime) params.timeSlot = initialTime;
 
       const res = await getRestaurantsApi(params);
       let fetched = res.data.restaurants || [];

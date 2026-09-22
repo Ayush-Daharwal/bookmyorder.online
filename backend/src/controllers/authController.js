@@ -11,9 +11,9 @@ const generateToken = (id) => {
 // @route   POST /api/auth/request-otp
 export const requestOtp = async (req, res) => {
   try {
-    const { phone } = req.body;
-    if (!phone) {
-      return res.status(400).json({ message: 'Mobile phone number is required' });
+    const phone = String(req.body.phone || '').replace(/\D/g, '');
+    if (!/^\d{10}$/.test(phone)) {
+      return res.status(400).json({ message: 'Enter a valid 10-digit mobile phone number' });
     }
 
     const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
@@ -41,7 +41,8 @@ export const requestOtp = async (req, res) => {
 // @route   POST /api/auth/verify-otp
 export const verifyOtp = async (req, res) => {
   try {
-    const { phone, otp, name, city, role } = req.body;
+    const phone = String(req.body.phone || '').replace(/\D/g, '');
+    const { otp, name, city, role } = req.body;
     if (!phone || !otp) {
       return res.status(400).json({ message: 'Phone and OTP are required' });
     }

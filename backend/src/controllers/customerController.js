@@ -4,11 +4,51 @@ import { TableBooking } from '../models/TableBooking.js';
 import { FoodOrder } from '../models/FoodOrder.js';
 import { Review } from '../models/Review.js';
 
+// Helper to compute available slots for a restaurant on a given date
+const ALL_TIME_SLOTS = [
+  '01:00 PM', '01:30 PM', '02:00 PM', '02:30 PM',
+  '07:00 PM', '07:30 PM', '08:00 PM', '08:30 PM', '09:00 PM', '09:30 PM'
+];
+
+export async function checkSlotAvailability(restaurantId, bookingDate, requestedSlot) {
+  const restaurant = await Restaurant.findById(restaurantId);
+  if (!restaurant) return { isAvailable: false, nearestSlots: ALL_TIME_SLOTS.slice(0, 3) };
+
+  const totalTables = restaurant.seatingCapacity?.totalTables || 15;
+  
+  const bookings = await TableBooking.find({
+    restaurantId,
+    bookingDate,
+    status: { $ne: 'cancelled' }
+  });
+
+  const slotCounts = {};
+  bookings.forEach((b) => {
+    slotCounts[b.timeSlot] = (slotCounts[b.timeSlot] || 0) + 1;
+  });
+
+  const isRequestedAvailable = requestedSlot ? (slotCounts[requestedSlot] || 0) < totalTables : true;
+
+  const availableSlots = ALL_TIME_SLOTS.filter((slot) => (slotCounts[slot] || 0) < totalTables);
+  let nearestSlots = availableSlots.filter((slot) => slot !== requestedSlot).slice(0, 3);
+  
+  if (nearestSlots.length === 0) {
+    nearestSlots = ALL_TIME_SLOTS.filter((slot) => slot !== requestedSlot).slice(0, 3);
+  }
+
+  return {
+    isAvailable: isRequestedAvailable,
+    bookedCount: slotCounts[requestedSlot] || 0,
+    totalCapacity: totalTables,
+    nearestSlots,
+  };
+}
+
 // @desc    Get All Restaurants with Filtering, Search & Location Sorting
 // @route   GET /api/customer/restaurants
 export const getRestaurants = async (req, res) => {
   try {
-    const { city, tier, cuisine, search, sortBy, hasTableBooking, searchMode } = req.query;
+    const { city, tier, cuisine, search, sortBy, hasTableBooking, searchMode, bookingDate, timeSlot } = req.query;
     let query = { isActive: true };
 
     if (city && city.toLowerCase() !== 'all') {
@@ -37,6 +77,33 @@ export const getRestaurants = async (req, res) => {
       ];
     }
 
+    // Filter restaurants that have available tables at requested bookingDate & timeSlot
+    if (bookingDate && timeSlot) {
+      const bookings = await TableBooking.find({
+        bookingDate,
+        timeSlot,
+        status: { $ne: 'cancelled' }
+      });
+
+      const restaurantBookingCount = {};
+      bookings.forEach((b) => {
+        const rId = b.restaurantId.toString();
+        restaurantBookingCount[rId] = (restaurantBookingCount[rId] || 0) + 1;
+      });
+
+      const fullyBookedIds = [];
+      for (const [rId, count] of Object.entries(restaurantBookingCount)) {
+        const rest = await Restaurant.findById(rId);
+        if (rest && count >= (rest.seatingCapacity?.totalTables || 15)) {
+          fullyBookedIds.push(rId);
+        }
+      }
+
+      if (fullyBookedIds.length > 0) {
+        query._id = { $nin: fullyBookedIds };
+      }
+    }
+
     let sortOptions = { rating: -1, ratingCount: -1 };
     if (sortBy === 'rating') {
       sortOptions = { rating: -1, ratingCount: -1 };
@@ -52,6 +119,22 @@ export const getRestaurants = async (req, res) => {
 
     const restaurants = await Restaurant.find(query).sort(sortOptions);
     res.json({ success: true, count: restaurants.length, restaurants });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Check Single Restaurant Slot Availability
+// @route   GET /api/customer/restaurants/:id/check-availability
+export const checkRestaurantAvailability = async (req, res) => {
+  try {
+    const { date, time } = req.query;
+    if (!date || !time) {
+      return res.status(400).json({ message: 'Date and time parameters are required' });
+    }
+
+    const availability = await checkSlotAvailability(req.params.id, date, time);
+    res.json({ success: true, ...availability });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -88,6 +171,20 @@ export const createBooking = async (req, res) => {
 
     if (!restaurantId || !mode || !bookingDate || !timeSlot) {
       return res.status(400).json({ message: 'Restaurant, mode, date, and time slot are required' });
+    }
+
+    // Verify availability unless it is canteen preorder
+    if (mode !== 'canteen_preorder') {
+      const availability = await checkSlotAvailability(restaurantId, bookingDate, timeSlot);
+      if (!availability.isAvailable) {
+        return res.status(400).json({
+          message: `Table is not available at ${timeSlot}`,
+          isFullyBooked: true,
+          requestedTime: timeSlot,
+          requestedDate: bookingDate,
+          nearestSlots: availability.nearestSlots
+        });
+      }
     }
 
     const bookingId = 'BMO-B-' + Math.floor(100000 + Math.random() * 900000);
