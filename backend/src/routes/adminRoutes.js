@@ -6,6 +6,9 @@ import {
   getAdminReviews,
   deleteAdminReview,
   getAdminUsers,
+  getPendingApplications,
+  approveRestaurantApplication,
+  rejectRestaurantApplication,
 } from '../controllers/adminController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
@@ -18,5 +21,9 @@ router.patch('/restaurants/:id/status', protect, authorize('admin'), updateResta
 router.get('/reviews', protect, authorize('admin'), getAdminReviews);
 router.delete('/reviews/:id', protect, authorize('admin'), deleteAdminReview);
 router.get('/users', protect, authorize('admin'), getAdminUsers);
+router.get('/restaurant-applications', protect, authorize('admin'), getPendingApplications);
+router.post('/approve-restaurant-application/:id', protect, authorize('admin'), approveRestaurantApplication);
+router.post('/reject-restaurant-application/:id', protect, authorize('admin'), rejectRestaurantApplication);
 
 export default router;
+

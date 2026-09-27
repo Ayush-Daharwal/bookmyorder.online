@@ -309,31 +309,37 @@ export default function RestaurantsPage({
 
                       {/* Modes Badges */}
                       <div className="flex flex-wrap gap-1.5 pt-1">
-                        <span className="text-[10px] font-bold bg-[#FAF8F5] text-slate-700 px-2 py-0.5 rounded-lg border border-sand-200">
-                          🍽️ Table Booking
-                        </span>
-                        <span className="text-[10px] font-bold bg-[#FAF8F5] text-slate-700 px-2 py-0.5 rounded-lg border border-sand-200">
-                          🛍️ Food Pre-Order
-                        </span>
+                        {(rest.tier === 'canteen' || rest.category === 'canteen' || rest.supportsTableBooking === false || rest.allowTableBooking === false) ? (
+                          <span className="text-[10px] font-bold bg-[#FAF8F5] text-slate-700 px-2 py-0.5 rounded-lg border border-sand-200">
+                            🍱 Pre-Order Food Only
+                          </span>
+                        ) : (
+                          <>
+                            <span className="text-[10px] font-bold bg-[#FAF8F5] text-slate-700 px-2 py-0.5 rounded-lg border border-sand-200">
+                              🍽️ Table Booking
+                            </span>
+                            <span className="text-[10px] font-bold bg-[#FAF8F5] text-slate-700 px-2 py-0.5 rounded-lg border border-sand-200">
+                              🛍️ Food Pre-Order
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
 
                   {/* Card Footer */}
-                  <div className="p-5 pt-0 border-t border-sand-100 flex items-center justify-between mt-4">
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Avg Cost</span>
-                      <span className="font-extrabold text-slate-900 text-sm">₹{rest.avgCostForTwo || 800} <span className="text-[10px] text-slate-500 font-normal">for two</span></span>
-                    </div>
-
+                  <div className="p-5 pt-0 border-t border-sand-100 flex items-center justify-end mt-4">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         onOpenDetail(rest._id);
                       }}
-                      className="bg-[#14382B] group-hover:bg-[#1B4D36] text-white px-4 py-2.5 rounded-xl font-extrabold text-xs shadow transition-all flex items-center gap-1.5"
+                      className="w-full bg-[#14382B] group-hover:bg-[#1B4D36] text-white px-4 py-2.5 rounded-xl font-extrabold text-xs shadow transition-all flex items-center justify-center gap-1.5"
                     >
-                      <Utensils className="w-3.5 h-3.5" /> Book & Pre-Order
+                      <Utensils className="w-3.5 h-3.5" />
+                      {(rest.tier === 'canteen' || rest.category === 'canteen' || rest.supportsTableBooking === false || rest.allowTableBooking === false)
+                        ? 'Pre-Order Food'
+                        : 'Book Table & Pre-Order'}
                     </button>
                   </div>
 

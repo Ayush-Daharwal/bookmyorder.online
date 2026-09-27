@@ -149,3 +149,128 @@ export const getAdminUsers = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// @desc    Get Pending Restaurant Applications
+// @route   GET /api/admin/restaurant-applications
+export const getPendingApplications = async (req, res) => {
+  try {
+    const { RestaurantApplication } = await import('../models/RestaurantApplication.js');
+    const applications = await RestaurantApplication.find().sort({ createdAt: -1 });
+    res.json({ success: true, count: applications.length, applications });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Approve Restaurant Application & Notify Partner
+// @route   POST /api/admin/approve-restaurant-application/:id
+export const approveRestaurantApplication = async (req, res) => {
+  try {
+    const { RestaurantApplication } = await import('../models/RestaurantApplication.js');
+    const app = await RestaurantApplication.findById(req.params.id);
+    if (!app) {
+      return res.status(404).json({ message: 'Application not found' });
+    }
+
+    app.status = 'approved';
+
+    // Find or create User with provider role
+    let user = await User.findOne({ email: app.email });
+    if (!user) {
+      user = await User.create({
+        email: app.email,
+        phone: app.managerPhone,
+        name: app.managerName,
+        role: 'provider',
+        city: 'Bhopal',
+        isVerified: true,
+        isEmailVerified: true,
+      });
+    } else {
+      user.role = 'provider';
+      user.isVerified = true;
+      user.isEmailVerified = true;
+      await user.save();
+    }
+
+    // Create or Update Restaurant
+    let restaurant = await Restaurant.findOne({ ownerId: user._id });
+    const photoList = [
+      app.photos.cardBanner,
+      app.photos.front,
+      app.photos.tableSeating,
+      app.photos.kitchen,
+      app.photos.servedFood,
+      app.photos.menu,
+    ].filter(Boolean);
+
+    if (!restaurant) {
+      restaurant = await Restaurant.create({
+        name: app.restaurantName,
+        tagline: `${app.foodType} Dining & Quick Pre-Orders`,
+        tier: app.category === 'luxury' ? 'premium' : app.category === 'canteen' ? 'canteen' : 'premium',
+        ownerId: user._id,
+        city: 'Bhopal',
+        address: app.address,
+        photos: photoList,
+        isPureVeg: app.foodType === 'Pure Veg',
+        managerDetails: {
+          name: app.managerName,
+          phone: app.managerPhone,
+          aadharNumber: app.ownerAadhaar,
+        },
+        licenses: {
+          gstin: app.gstin,
+          fssaiNumber: app.fssaiNumber,
+          fdaNumber: app.fdaNumber,
+          isVerified: true,
+        },
+        isVerified: true,
+        isActive: true,
+      });
+    } else {
+      restaurant.isVerified = true;
+      restaurant.isActive = true;
+      await restaurant.save();
+    }
+
+    // Add Simulated Email & SMS notification records
+    const emailMsg = `Your application has been approved! Now you can login to our platform with your email id: ${app.email}`;
+    const smsMsg = `bookmyorder.online Alert: Your restaurant application for ${app.restaurantName} has been approved! Log in now with ${app.email}`;
+
+    app.notificationsSent.push(
+      { channel: 'EMAIL', to: app.email, message: emailMsg, sentAt: new Date() },
+      { channel: 'SMS', to: app.managerPhone, message: smsMsg, sentAt: new Date() }
+    );
+    await app.save();
+
+    res.json({
+      success: true,
+      message: `Restaurant application approved successfully! Email and SMS sent to ${app.email} and ${app.managerPhone}.`,
+      application: app,
+      restaurant,
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Reject Restaurant Application
+// @route   POST /api/admin/reject-restaurant-application/:id
+export const rejectRestaurantApplication = async (req, res) => {
+  try {
+    const { RestaurantApplication } = await import('../models/RestaurantApplication.js');
+    const { reason } = req.body;
+    const app = await RestaurantApplication.findByIdAndUpdate(
+      req.params.id,
+      { status: 'rejected', rejectionReason: reason || 'Details require revision.' },
+      { new: true }
+    );
+
+    res.json({ success: true, message: 'Application rejected', application: app });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+

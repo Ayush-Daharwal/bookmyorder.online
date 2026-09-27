@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Printer, CheckCircle2, ShieldCheck, QrCode, Download, ArrowLeft, Utensils, FileText } from 'lucide-react';
 import { downloadPdfBill } from '../utils/pdfGenerator';
+import { calculatePlatformFee } from '../utils/feeCalculator';
 
 export default function DigitalReceiptModal({ isOpen, onClose, booking, order, restaurant, user }) {
   const [downloading, setDownloading] = useState(false);
@@ -19,6 +20,7 @@ export default function DigitalReceiptModal({ isOpen, onClose, booking, order, r
 
   const receiptId = booking?.bookingId || order?.orderId || `REC-${Date.now()}`;
   const restObj = restaurant || booking?.restaurantId || order?.restaurantId || {};
+  const restTier = restObj.tier || 'premium';
   
   const restName = restObj.name || 'Partner Restaurant';
   const restAddress = restObj.address ? `${restObj.address}, ${restObj.city || 'Bhopal'}` : (restObj.city || 'Bhopal');
@@ -35,28 +37,18 @@ export default function DigitalReceiptModal({ isOpen, onClose, booking, order, r
     hour12: true,
   });
 
-  const paymentTimeStr = new Date(orderCreatedAt).toLocaleString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  });
+  const paymentTimeStr = orderTimeStr;
 
   const foodItems = order?.items || booking?.foodOrderId?.items || [];
   
-  let subtotal = order?.subtotal || booking?.foodOrderId?.subtotal || 0;
-  let tax = order?.tax || booking?.foodOrderId?.tax || (subtotal > 0 ? Math.round(subtotal * 0.05) : 0);
-  let platformFee = order?.platformFee || booking?.foodOrderId?.platformFee || (subtotal > 0 ? 15 : 0);
-  let totalAmount = order?.totalAmount || booking?.foodOrderId?.totalAmount || (subtotal + tax + platformFee);
-
-  if (totalAmount === 0 && booking) {
-    subtotal = 100;
-    tax = 5;
-    platformFee = 15;
-    totalAmount = 120;
-  }
+  let foodSubtotal = order?.subtotal || booking?.foodOrderId?.subtotal || 0;
+  let tablePrice = booking?.tablePrice !== undefined ? booking.tablePrice : (booking && foodSubtotal === 0 ? 100 : 0);
+  let subtotal = foodSubtotal;
+  let baseAmount = subtotal + tablePrice;
+  let tax = order?.tax || booking?.foodOrderId?.tax || (baseAmount > 0 ? Math.round(baseAmount * 0.05) : 0);
+  let baseWithGst = baseAmount + tax;
+  let platformFee = order?.platformFee !== undefined ? order.platformFee : calculatePlatformFee(baseWithGst, restTier);
+  let totalAmount = order?.totalAmount || booking?.foodOrderId?.totalAmount || (baseWithGst + platformFee);
 
   const paymentMethod = order?.paymentMethod || booking?.foodOrderId?.paymentMethod || 'Bank Transfer / UPI / QR Code (Cashfree PG)';
   const cashfreeTxnId = order?.cashfreePaymentId || booking?.foodOrderId?.cashfreePaymentId || `CF_PAY_${Math.floor(100000 + Math.random() * 900000)}`;
@@ -68,7 +60,7 @@ export default function DigitalReceiptModal({ isOpen, onClose, booking, order, r
   return (
     <>
       {/* 1. SCREEN VIEW: Interactive Web Modal UI */}
-      <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-md p-3 sm:p-6 flex justify-center items-start sm:items-center no-print">
+      <div data-receipt-modal="true" className="official-tax-receipt-modal fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-md p-3 sm:p-6 flex justify-center items-start sm:items-center no-print">
         <div className="bg-white rounded-3xl max-w-xl w-full shadow-2xl relative border border-sand-200 overflow-hidden my-auto sm:my-8 flex flex-col max-h-[92vh]">
           
           {/* Sticky Header with Back Button & Close Icon */}
@@ -134,18 +126,24 @@ export default function DigitalReceiptModal({ isOpen, onClose, booking, order, r
                 <p className="font-bold text-slate-800">{orderTimeStr}</p>
               </div>
               {booking && (
+                <div>
+                  <p className="text-slate-400 font-medium text-[10px] uppercase">Booking Option</p>
+                  <p className="font-bold text-forest-800">
+                    {booking.mode === 'table_and_food' ? '🍲 Table + Pre-Order Food' : booking.mode === 'canteen_preorder' ? '🍱 Canteen Pre-Order' : '🪑 Book Only Table'}
+                  </p>
+                </div>
+              )}
+              {booking && booking.mode !== 'canteen_preorder' && booking.tableNumber && !booking.tableNumber.toLowerCase().includes('no table') && (
                 <>
                   <div>
-                    <p className="text-slate-400 font-medium text-[10px] uppercase">Dining Mode</p>
-                    <p className="font-bold text-forest-800 uppercase">{booking.mode?.replace(/_/g, ' ')}</p>
+                    <p className="text-slate-400 font-medium text-[10px] uppercase">Assigned Table & Slot</p>
+                    <p className="font-bold text-terracotta-600">
+                      {`${booking.tableNumber} (Time: ${booking.timeSlot || '07:30 PM'})`}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-slate-400 font-medium text-[10px] uppercase">Assigned Table / Slot</p>
-                    <p className="font-bold text-terracotta-600">
-                      {booking.mode === 'canteen_preorder' || !booking.tableNumber || booking.tableNumber.toLowerCase().includes('no table')
-                        ? 'No table reservation'
-                        : `${booking.tableNumber} (${booking.timeSlot})`}
-                    </p>
+                    <p className="text-slate-400 font-medium text-[10px] uppercase">Booking Duration</p>
+                    <p className="font-bold text-slate-800">{booking.durationMinutes || 60} Minutes</p>
                   </div>
                 </>
               )}
@@ -173,12 +171,20 @@ export default function DigitalReceiptModal({ isOpen, onClose, booking, order, r
 
             {/* Payment Breakdown */}
             <div className="space-y-1.5 text-xs text-slate-600 pt-2 border-t border-sand-200">
+              {tablePrice > 0 && (
+                <div className="flex justify-between">
+                  <span>Table Reservation Charge ({booking?.durationMinutes || 60} Mins)</span>
+                  <span className="font-semibold text-slate-800">₹{tablePrice}</span>
+                </div>
+              )}
+              {subtotal > 0 && (
+                <div className="flex justify-between">
+                  <span>Food Items Subtotal</span>
+                  <span className="font-semibold text-slate-800">₹{subtotal}</span>
+                </div>
+              )}
               <div className="flex justify-between">
-                <span>Subtotal</span>
-                <span className="font-semibold text-slate-800">₹{subtotal}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>GST (5%)</span>
+                <span>GST / Restaurant Taxes (5%)</span>
                 <span className="font-semibold text-slate-800">₹{tax}</span>
               </div>
               <div className="flex justify-between">

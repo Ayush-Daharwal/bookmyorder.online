@@ -38,6 +38,14 @@ const tableBookingSchema = new mongoose.Schema(
       type: String,
       default: 'T-04',
     },
+    durationMinutes: {
+      type: Number,
+      default: 60, // 15, 30, 45, 60, or custom minutes
+    },
+    tablePrice: {
+      type: Number,
+      default: 100, // Table booking charge in Rupees
+    },
     specialRequests: {
       type: String,
       default: '',
@@ -46,6 +54,10 @@ const tableBookingSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'FoodOrder',
     },
+    addonFoodOrders: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'FoodOrder',
+    }],
     status: {
       type: String,
       enum: ['pending', 'confirmed', 'seated', 'completed', 'cancelled'],
