@@ -142,7 +142,7 @@ export const updateProfile = async (req, res) => {
 
     if (name) user.name = name;
     if (city) user.city = city;
-    if (avatar) user.avatar = avatar;
+    if (avatar !== undefined) user.avatar = avatar;
     if (email && email !== user.email) {
       user.email = email;
       user.isEmailVerified = false; // Reset verification if email changes

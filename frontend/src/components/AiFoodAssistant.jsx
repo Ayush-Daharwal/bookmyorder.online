@@ -10,14 +10,25 @@ const initialGreeting = {
   text: 'Namaste! I am Shushi AI 🤖, your personal culinary concierge. Ask me for smart dish recommendations, high-protein meals, chef specials, or budget pairings!',
 };
 
-export default function AiFoodAssistant({ restaurantId, onOpenDetail }) {
+export default function AiFoodAssistant({ restaurantId, onOpenDetail, hide }) {
   const [isOpen, setIsOpen] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [dietary, setDietary] = useState('veg');
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState([initialGreeting]);
+  const [isReceiptActive, setIsReceiptActive] = useState(false);
 
   const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    const checkReceipt = () => {
+      const active = !!document.querySelector('[data-receipt-modal="true"]');
+      setIsReceiptActive(active);
+    };
+    checkReceipt();
+    const interval = setInterval(checkReceipt, 300);
+    return () => clearInterval(interval);
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -42,6 +53,8 @@ export default function AiFoodAssistant({ restaurantId, onOpenDetail }) {
   useEffect(() => {
     scrollToBottom();
   }, [messages, loading, isOpen]);
+
+  if (hide || isReceiptActive) return null;
 
   const saveMessagesToStorage = (newMsgs) => {
     try {

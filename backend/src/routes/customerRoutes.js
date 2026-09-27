@@ -4,6 +4,7 @@ import {
   getRestaurantById,
   checkRestaurantAvailability,
   createBooking,
+  addFoodToBooking,
   getMyHistory,
   addReview,
 } from '../controllers/customerController.js';
@@ -15,6 +16,7 @@ router.get('/restaurants', getRestaurants);
 router.get('/restaurants/:id/check-availability', checkRestaurantAvailability);
 router.get('/restaurants/:id', getRestaurantById);
 router.post('/bookings', protect, createBooking);
+router.post('/bookings/:id/add-food', protect, addFoodToBooking);
 router.get('/my-history', protect, getMyHistory);
 router.post('/reviews', protect, addReview);
 

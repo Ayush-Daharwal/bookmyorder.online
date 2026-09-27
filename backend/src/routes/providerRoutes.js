@@ -1,5 +1,8 @@
 import express from 'express';
 import {
+  submitRestaurantApplication,
+  partnerLogin,
+  getPartnerAnalytics,
   registerRestaurant,
   getMyRestaurant,
   saveMenuItem,
@@ -13,7 +16,11 @@ import { protect, requireRole } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+router.post('/register-application', submitRestaurantApplication);
+router.post('/partner-login', partnerLogin);
+router.get('/partner-analytics', getPartnerAnalytics);
 router.post('/register-restaurant', protect, registerRestaurant);
+
 router.get('/my-restaurant', protect, getMyRestaurant);
 router.post('/menu-items', protect, requireRole(['provider', 'admin']), saveMenuItem);
 router.get('/menu-items/:restaurantId', getMenuByRestaurant);
@@ -23,3 +30,4 @@ router.patch('/orders/:orderId/status', protect, requireRole(['provider', 'admin
 router.post('/walkin-booking', protect, requireRole(['provider', 'admin']), createWalkInBooking);
 
 export default router;
+

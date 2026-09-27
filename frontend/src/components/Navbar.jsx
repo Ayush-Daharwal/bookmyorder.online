@@ -45,17 +45,19 @@ export default function Navbar({ user, onOpenAuth, onLogout, currentTab, setCurr
             Restaurants
           </button>
           
-          <button
-            onClick={() => setCurrentTab('provider')}
-            className={`px-5 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-1.5 ${
-              currentTab === 'provider' 
-                ? 'bg-[#14382B] text-white shadow' 
-                : 'text-slate-700 hover:text-slate-900'
-            }`}
-          >
-            <Store className="w-4 h-4 text-[#FF5722]" />
-            Partner POS & KDS
-          </button>
+          {(!user || user.role === 'provider' || user.role === 'admin') && (
+            <button
+              onClick={() => setCurrentTab('provider')}
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                currentTab === 'provider' 
+                  ? 'bg-[#14382B] text-white shadow' 
+                  : 'text-slate-700 hover:text-slate-900'
+              }`}
+            >
+              <Store className="w-4 h-4 text-[#FF5722]" />
+              Partner POS & KDS
+            </button>
+          )}
 
           {user && (
             <button

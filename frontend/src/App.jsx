@@ -55,6 +55,12 @@ export default function App() {
     fetchRestaurants();
   }, [selectedTier]);
 
+  useEffect(() => {
+    if (user && (user.role === 'customer' || user.role === 'user') && currentTab === 'provider') {
+      setCurrentTab('home');
+    }
+  }, [user, currentTab]);
+
   const checkUser = async () => {
     const token = localStorage.getItem('bmo_token');
     if (!token) return;
@@ -478,7 +484,9 @@ export default function App() {
                 <div className="bg-white rounded-3xl p-12 text-center border border-sand-200 max-w-lg mx-auto">
                   <Utensils className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                   <p className="font-bold text-slate-900 text-base">No restaurants listed for this filter.</p>
-                  <p className="text-xs text-slate-500 mt-1">Register a partner venue in Partner POS & KDS above!</p>
+                  {(!user || user.role === 'provider' || user.role === 'admin') && (
+                    <p className="text-xs text-slate-500 mt-1">Register a partner venue in Partner POS & KDS above!</p>
+                  )}
                 </div>
               )}
             </section>

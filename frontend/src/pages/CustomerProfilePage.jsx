@@ -1,15 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { User, Calendar, Clock, ShoppingBag, Star, ShieldCheck, CheckCircle2, FileText, Check, Edit3, Mail, LogOut, Lock, Sparkles, Send, Camera, Download } from 'lucide-react';
-import { getMyHistoryApi, addReviewApi, updateProfileApi, requestEmailOtpApi, verifyEmailOtpApi } from '../services/api';
+import { User, Calendar, Clock, ShoppingBag, Star, ShieldCheck, CheckCircle2, FileText, Check, Edit3, Mail, LogOut, Lock, Sparkles, Send, Camera, Download, Plus, Utensils, Trash2, Upload, ChevronDown, ChevronUp } from 'lucide-react';
+import { getMyHistoryApi, addReviewApi, updateProfileApi, requestEmailOtpApi, verifyEmailOtpApi, getRestaurantByIdApi, addFoodToBookingApi } from '../services/api';
 import DigitalReceiptModal from '../components/DigitalReceiptModal';
 import { downloadPdfBill } from '../utils/pdfGenerator';
 
 export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUserUpdate }) {
+  const [activeTab, setActiveTab] = useState('bookings'); // 'bookings' or 'profile'
   const [history, setHistory] = useState({ bookings: [], orders: [] });
+  const [visibleHistoryCount, setVisibleHistoryCount] = useState(6);
   const [loading, setLoading] = useState(true);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+
+  // Profile Picture Modal state (Remove vs Upload)
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+
+  // Add Food Modal State
+  const [addFoodModal, setAddFoodModal] = useState({
+    isOpen: false,
+    booking: null,
+    menuItems: [],
+    cart: {},
+    loadingMenu: false,
+    submitting: false,
+  });
 
   // Profile Edit State
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -44,6 +59,88 @@ export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUser
       console.error('History load error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkCanAddFood = (booking) => {
+    if (!booking || booking.status === 'cancelled') return false;
+    const timeSlot = booking.timeSlot || '07:30 PM';
+    const match = timeSlot.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+    let hours = 19, mins = 30;
+    if (match) {
+      hours = parseInt(match[1]);
+      mins = parseInt(match[2]);
+      const ampm = match[3];
+      if (ampm) {
+        if (ampm.toUpperCase() === 'PM' && hours < 12) hours += 12;
+        if (ampm.toUpperCase() === 'AM' && hours === 12) hours = 0;
+      }
+    }
+    const dateStr = booking.bookingDate || new Date().toISOString().split('T')[0];
+    const [yr, mo, dy] = dateStr.split('-').map(Number);
+    const startDate = new Date(yr, mo - 1, dy, hours, mins, 0);
+    const durationMins = booking.durationMinutes || 60;
+    const endDate = new Date(startDate.getTime() + durationMins * 60 * 1000);
+    const cutoffTime = new Date(endDate.getTime() - 2 * 60 * 1000); // 2 mins cutoff before end time
+
+    const now = new Date();
+    return now < cutoffTime;
+  };
+
+  const handleOpenAddFoodModal = async (booking) => {
+    const restId = booking.restaurantId?._id || booking.restaurantId;
+    setAddFoodModal({ isOpen: true, booking, menuItems: [], cart: {}, loadingMenu: true, submitting: false });
+    try {
+      const res = await getRestaurantByIdApi(restId);
+      setAddFoodModal((prev) => ({ ...prev, menuItems: res.data.menuItems || [], loadingMenu: false }));
+    } catch (err) {
+      alert('Failed to fetch restaurant menu');
+      setAddFoodModal((prev) => ({ ...prev, loadingMenu: false }));
+    }
+  };
+
+  const handleAddFoodModalCart = (item, portion = 'full', delta = 1) => {
+    setAddFoodModal((prev) => {
+      const key = `${item._id}_${portion}`;
+      const existing = prev.cart[key] || { item, portion, quantity: 0, customNote: '' };
+      const newQty = existing.quantity + delta;
+      const newCart = { ...prev.cart };
+      if (newQty <= 0) {
+        delete newCart[key];
+      } else {
+        newCart[key] = { ...existing, quantity: newQty };
+      }
+      return { ...prev, cart: newCart };
+    });
+  };
+
+  const handleSubmitAddFood = async () => {
+    const cartList = Object.values(addFoodModal.cart);
+    if (cartList.length === 0) {
+      alert('Please add at least 1 dish from the menu.');
+      return;
+    }
+    setAddFoodModal((prev) => ({ ...prev, submitting: true }));
+    try {
+      const itemsPayload = cartList.map((entry) => ({
+        _id: entry.item._id,
+        name: entry.item.name,
+        portion: entry.portion,
+        pricing: entry.item.pricing,
+        quantity: entry.quantity,
+        customNote: entry.customNote || '',
+      }));
+
+      const res = await addFoodToBookingApi(addFoodModal.booking._id, { items: itemsPayload });
+      alert('🎉 Add-on food order placed successfully for your reserved table!');
+      setAddFoodModal({ isOpen: false, booking: null, menuItems: [], cart: {}, loadingMenu: false, submitting: false });
+      await fetchHistory();
+      if (res.data.foodOrder) {
+        handleOpenReceipt(res.data.booking, res.data.foodOrder);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to add food to reserved table');
+      setAddFoodModal((prev) => ({ ...prev, submitting: false }));
     }
   };
 
@@ -137,6 +234,18 @@ export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUser
     }
   };
 
+  const handleRemoveAvatar = async () => {
+    try {
+      const res = await updateProfileApi({ avatar: '' });
+      if (onUserUpdate) onUserUpdate(res.data.user);
+      alert('Profile picture removed successfully!');
+      setIsAvatarModalOpen(false);
+    } catch (err) {
+      console.error('Remove avatar error:', err);
+      alert(err.response?.data?.message || 'Failed to remove profile picture.');
+    }
+  };
+
   const handleSendEmailOtp = async () => {
     if (!emailInput || !emailInput.includes('@')) {
       alert('Please enter a valid email address');
@@ -195,16 +304,44 @@ export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUser
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       
-      {/* Profile Header & Account Details Card */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-sand-200 space-y-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pb-6 border-b border-sand-200">
-          <div className="flex items-center gap-4">
+      {/* Sub-Tab Navigation Bar */}
+      <div className="flex items-center gap-2 border-b border-sand-200 pb-3 font-bold text-xs">
+        <button
+          onClick={() => setActiveTab('bookings')}
+          className={`px-5 py-2.5 rounded-full transition-all flex items-center gap-2 cursor-pointer ${
+            activeTab === 'bookings'
+              ? 'bg-[#14382B] text-white shadow-md'
+              : 'bg-white text-slate-700 hover:bg-sand-100 border border-sand-200'
+          }`}
+        >
+          <Calendar className="w-4 h-4 text-[#FF5722]" />
+          My Table Reservations & Pre-Orders ({history.bookings?.length || 0})
+        </button>
+
+        <button
+          onClick={() => setActiveTab('profile')}
+          className={`px-5 py-2.5 rounded-full transition-all flex items-center gap-2 cursor-pointer ${
+            activeTab === 'profile'
+              ? 'bg-[#14382B] text-white shadow-md'
+              : 'bg-white text-slate-700 hover:bg-sand-100 border border-sand-200'
+          }`}
+        >
+          <User className="w-4 h-4 text-emerald-400" />
+          Account Profile & Settings
+        </button>
+      </div>
+
+      {/* Profile Header & Account Details Card (Only shown when activeTab === 'profile') */}
+      {activeTab === 'profile' && (
+        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-sand-200 space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pb-6 border-b border-sand-200">
+            <div className="flex items-center gap-4">
             
-            {/* Clickable Profile DP Avatar with WhatsApp-Style Green Camera Badge */}
+            {/* Clickable Profile DP Avatar with Options Modal Trigger */}
             <div className="relative inline-block">
               <div
-                onClick={() => document.getElementById('profile-dp-file-input').click()}
-                title="Click to upload/change profile photo"
+                onClick={() => setIsAvatarModalOpen(true)}
+                title="Click for Profile Picture Options"
                 className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-4 border-sand-100 shadow-md shrink-0 bg-[#14382B] text-white flex items-center justify-center font-extrabold text-2xl cursor-pointer group hover:opacity-95 transition-opacity"
               >
                 {user.avatar ? (
@@ -217,8 +354,8 @@ export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUser
               {/* WhatsApp-Style Floating Green Camera Circle Icon */}
               <button
                 type="button"
-                onClick={() => document.getElementById('profile-dp-file-input').click()}
-                title="Upload Profile Photo"
+                onClick={() => setIsAvatarModalOpen(true)}
+                title="Profile Photo Options"
                 className="absolute bottom-0 right-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-slate-900 shadow-lg border-2 border-white flex items-center justify-center transition-transform hover:scale-110 cursor-pointer z-10"
               >
                 <Camera className="w-4 h-4 text-slate-900 stroke-[2.5]" />
@@ -376,107 +513,204 @@ export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUser
           )}
         </div>
       </div>
+      )}
 
-      {/* Bookings & Orders History Grid */}
-      <div className="space-y-8">
-        <div>
-          <h3 className="font-extrabold text-forest-900 text-xl mb-4">My Table Reservations & Pre-Orders</h3>
+      {/* Profile Picture Option Modal (Remove vs Upload from Device) */}
+      {isAvatarModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl relative border border-sand-200 text-center space-y-4">
+            <h3 className="font-extrabold text-forest-900 text-lg">Profile Picture Options</h3>
+            <p className="text-xs text-slate-500">Choose an action for your account avatar</p>
+            
+            <div className="space-y-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAvatarModalOpen(false);
+                  setTimeout(() => {
+                    document.getElementById('profile-dp-file-input').click();
+                  }, 150);
+                }}
+                className="w-full bg-[#14382B] hover:bg-forest-900 text-white font-extrabold py-3 px-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow cursor-pointer transition-all"
+              >
+                <Upload className="w-4 h-4 text-amber-400" />
+                Upload from Device / Gallery
+              </button>
+
+              {user?.avatar && (
+                <button
+                  type="button"
+                  onClick={handleRemoveAvatar}
+                  className="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 font-extrabold py-3 px-4 rounded-2xl text-xs flex items-center justify-center gap-2 border border-rose-200 cursor-pointer transition-all"
+                >
+                  <Trash2 className="w-4 h-4 text-rose-600" />
+                  Remove Profile Picture
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setIsAvatarModalOpen(false)}
+                className="w-full bg-sand-100 hover:bg-sand-200 text-slate-700 font-bold py-2.5 px-4 rounded-2xl text-xs cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bookings & Orders History Grid (Only shown when activeTab === 'bookings') */}
+      {activeTab === 'bookings' && (
+        <div className="space-y-8">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-extrabold text-forest-900 text-xl">My Table Reservations & Pre-Orders</h3>
+            {history.bookings && history.bookings.length > 0 && (
+              <span className="text-xs font-bold text-slate-500 bg-sand-100 px-3 py-1 rounded-full border border-sand-200">
+                Showing {Math.min(visibleHistoryCount, history.bookings.length)} of {history.bookings.length} Cards
+              </span>
+            )}
+          </div>
           
           {history.bookings && history.bookings.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {history.bookings.map((b) => {
-                const isCanteenOrNoTable = b.mode === 'canteen_preorder' || !b.tableNumber || b.tableNumber.toLowerCase().includes('no table');
-                const foodOrder = b.foodOrderId;
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {history.bookings.slice(0, visibleHistoryCount).map((b) => {
+                  const isCanteenOrNoTable = b.mode === 'canteen_preorder' || !b.tableNumber || b.tableNumber.toLowerCase().includes('no table');
+                  const foodOrder = b.foodOrderId;
 
-                return (
-                  <div key={b._id} className="bg-white rounded-3xl p-5 shadow-sm border border-sand-200 space-y-3">
-                    <div className="flex items-center justify-between border-b border-sand-200 pb-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-extrabold text-forest-800 bg-sand-100 px-3 py-1 rounded-full border border-sand-200">
-                            {b.bookingId}
-                          </span>
-                          {foodOrder && (
-                            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                              ₹{foodOrder.totalAmount} Paid (UPI/Card)
+                  return (
+                    <div key={b._id} className="bg-white rounded-3xl p-5 shadow-sm border border-sand-200 space-y-3 hover:shadow-md transition-shadow">
+                      <div className="flex items-center justify-between border-b border-sand-200 pb-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-extrabold text-forest-800 bg-sand-100 px-3 py-1 rounded-full border border-sand-200">
+                              {b.bookingId}
                             </span>
+                            {foodOrder && (
+                              <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                                ₹{foodOrder.totalAmount} Paid (UPI/Card)
+                              </span>
+                            )}
+                          </div>
+                          <h4 className="font-bold text-slate-800 text-base mt-2">{b.restaurantId?.name || 'Restaurant'}</h4>
+                          <p className="text-[11px] text-slate-500 font-medium">{b.restaurantId?.address || b.restaurantId?.city}</p>
+                          
+                          {(b.restaurantId?.licenses?.fssaiNumber || b.restaurantId?.fssaiLicenseNumber || b.restaurantId?.licenses?.gstin || b.restaurantId?.gstin) && (
+                            <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                              {b.restaurantId?.licenses?.fssaiNumber || b.restaurantId?.fssaiLicenseNumber ? `FSSAI: ${b.restaurantId?.licenses?.fssaiNumber || b.restaurantId?.fssaiLicenseNumber}` : ''}
+                              {(b.restaurantId?.licenses?.gstin || b.restaurantId?.gstin) ? ` • GSTIN: ${b.restaurantId?.licenses?.gstin || b.restaurantId?.gstin}` : ''}
+                            </p>
                           )}
                         </div>
-                        <h4 className="font-bold text-slate-800 text-base mt-2">{b.restaurantId?.name || 'Restaurant'}</h4>
-                        <p className="text-[11px] text-slate-500 font-medium">{b.restaurantId?.address || b.restaurantId?.city}</p>
-                        
-                        {(b.restaurantId?.licenses?.fssaiNumber || b.restaurantId?.fssaiLicenseNumber || b.restaurantId?.licenses?.gstin || b.restaurantId?.gstin) && (
-                          <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                            {b.restaurantId?.licenses?.fssaiNumber || b.restaurantId?.fssaiLicenseNumber ? `FSSAI: ${b.restaurantId?.licenses?.fssaiNumber || b.restaurantId?.fssaiLicenseNumber}` : ''}
-                            {(b.restaurantId?.licenses?.gstin || b.restaurantId?.gstin) ? ` • GSTIN: ${b.restaurantId?.licenses?.gstin || b.restaurantId?.gstin}` : ''}
-                          </p>
-                        )}
+                        <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full uppercase">
+                          {b.status}
+                        </span>
                       </div>
-                      <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full uppercase">
-                        {b.status}
-                      </span>
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 bg-sand-50 p-3 rounded-2xl border border-sand-200">
-                      <div>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase">Date & Slot</p>
-                        <p className="font-bold text-slate-800">{b.bookingDate}</p>
-                        <p className="text-[11px] text-slate-600 font-semibold">{b.timeSlot}</p>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 bg-sand-50 p-3 rounded-2xl border border-sand-200">
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">Date & Slot</p>
+                          <p className="font-bold text-slate-800">{b.bookingDate}</p>
+                          <p className="text-[11px] text-slate-600 font-semibold">{b.timeSlot}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">Assigned Table / Slot</p>
+                          {isCanteenOrNoTable ? (
+                            <p className="font-bold text-[#D84315]">No table reservation</p>
+                          ) : (
+                            <p className="font-bold text-emerald-800">{b.tableNumber} <span className="text-[10px] text-slate-500 font-normal">({b.guestCount} guests)</span></p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase">Assigned Table / Slot</p>
-                        {isCanteenOrNoTable ? (
-                          <p className="font-bold text-[#D84315]">No table reservation</p>
-                        ) : (
-                          <p className="font-bold text-emerald-800">{b.tableNumber} <span className="text-[10px] text-slate-500 font-normal">({b.guestCount} guests)</span></p>
-                        )}
-                      </div>
-                    </div>
 
-                    {/* Pre-ordered items snippet */}
-                    {foodOrder && foodOrder.items && foodOrder.items.length > 0 && (
-                      <div className="text-xs text-slate-600 space-y-1 bg-white p-2.5 rounded-xl border border-sand-200">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Pre-Ordered Food Items</p>
-                        {foodOrder.items.map((it, idx) => (
-                          <div key={idx} className="flex justify-between items-center text-[11px]">
-                            <span className="font-semibold text-slate-700">
-                              {it.quantity}x {it.name} <span className="text-slate-400">({it.portion})</span>
+                      {/* Pre-ordered items snippet */}
+                      {foodOrder && foodOrder.items && foodOrder.items.length > 0 && (
+                        <div className="text-xs text-slate-600 space-y-1 bg-white p-2.5 rounded-xl border border-sand-200">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase">Pre-Ordered Food Items</p>
+                          {foodOrder.items.map((it, idx) => (
+                            <div key={idx} className="flex justify-between items-center text-[11px]">
+                              <span className="font-semibold text-slate-700">
+                                {it.quantity}x {it.name} <span className="text-slate-400">({it.portion})</span>
+                              </span>
+                              <span className="font-bold text-slate-800">₹{it.price * it.quantity}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="pt-2 border-t border-sand-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {checkCanAddFood(b) ? (
+                            <button
+                              onClick={() => handleOpenAddFoodModal(b)}
+                              className="bg-[#D84315] hover:bg-[#B71C1C] text-white font-black px-3 py-2 rounded-xl transition-all flex items-center gap-1 shadow-md text-xs cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                              + Add Food to Table
+                            </button>
+                          ) : b.mode !== 'canteen_preorder' ? (
+                            <span className="text-[10px] font-bold text-slate-400 bg-sand-100 px-2.5 py-1.5 rounded-lg border border-sand-200" title="Food can only be added up to 2 minutes before reserved table time ends">
+                              🔒 Food Window Closed
                             </span>
-                            <span className="font-bold text-slate-800">₹{it.price * it.quantity}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          ) : null}
 
-                    <div className="pt-2 border-t border-sand-200 flex flex-wrap items-center justify-between gap-2 text-xs">
-                      <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => downloadPdfBill({ booking: b, order: foodOrder, restaurant: b.restaurantId, user })}
+                            className="gradient-orange-btn text-white font-extrabold px-3 py-2 rounded-xl transition-all flex items-center gap-1 shadow-sm text-xs cursor-pointer"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            Download Bill
+                          </button>
+
+                          <button
+                            onClick={() => handleOpenReceipt(b, foodOrder)}
+                            className="bg-[#14382B] hover:bg-forest-900 text-white font-bold px-3 py-2 rounded-xl transition-all flex items-center gap-1 text-xs cursor-pointer"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-amber-400" />
+                            View Receipt
+                          </button>
+                        </div>
+
                         <button
-                          onClick={() => downloadPdfBill({ booking: b, order: foodOrder, restaurant: b.restaurantId, user })}
-                          className="gradient-orange-btn text-white font-extrabold px-3.5 py-2 rounded-xl transition-all flex items-center gap-1 shadow-sm text-xs cursor-pointer"
+                          onClick={() => handleOpenReview(b.restaurantId?._id)}
+                          className="text-terracotta-600 hover:underline font-bold text-xs ml-auto sm:ml-0"
                         >
-                          <Download className="w-3.5 h-3.5" />
-                          Download Bill (PDF)
-                        </button>
-
-                        <button
-                          onClick={() => handleOpenReceipt(b, foodOrder)}
-                          className="bg-[#14382B] hover:bg-forest-900 text-white font-bold px-3 py-2 rounded-xl transition-all flex items-center gap-1 text-xs cursor-pointer"
-                        >
-                          <FileText className="w-3.5 h-3.5 text-amber-400" />
-                          View Receipt
+                          Rate & Review ★
                         </button>
                       </div>
-
-                      <button
-                        onClick={() => handleOpenReview(b.restaurantId?._id)}
-                        className="text-terracotta-600 hover:underline font-bold text-xs"
-                      >
-                        Rate & Review ★
-                      </button>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+
+              {/* View More / Show Less Pagination Controls (Requirement 7) */}
+              {history.bookings.length > 6 && (
+                <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
+                  {history.bookings.length > visibleHistoryCount && (
+                    <button
+                      type="button"
+                      onClick={() => setVisibleHistoryCount((prev) => prev + 6)}
+                      className="gradient-orange-btn text-white font-extrabold px-6 py-3 rounded-2xl text-xs shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <ChevronDown className="w-4 h-4 stroke-[3]" />
+                      View More (+6 Cards)
+                    </button>
+                  )}
+
+                  {visibleHistoryCount > 6 && (
+                    <button
+                      type="button"
+                      onClick={() => setVisibleHistoryCount((prev) => Math.max(6, prev - 6))}
+                      className="bg-sand-100 hover:bg-sand-200 text-slate-800 font-extrabold px-5 py-3 rounded-2xl text-xs border border-sand-300 transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <ChevronUp className="w-4 h-4 stroke-[3]" />
+                      Show Less
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <div className="bg-white rounded-3xl p-8 text-center border border-sand-200 text-slate-500 text-xs">
@@ -485,6 +719,7 @@ export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUser
           )}
         </div>
       </div>
+      )}
 
       {/* Review Submission Modal */}
       {reviewModal.isOpen && (
@@ -539,6 +774,141 @@ export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUser
         </div>
       )}
 
+      {/* Add Food to Reserved Table Modal */}
+      {addFoodModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/80 backdrop-blur-md overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative border border-sand-200 space-y-4 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-sand-200 pb-3 shrink-0">
+              <div>
+                <h3 className="text-lg font-extrabold text-forest-900 flex items-center gap-2">
+                  <Utensils className="w-5 h-5 text-[#D84315]" /> Add Food to Reserved Table ({addFoodModal.booking?.tableNumber || 'Table'})
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  {addFoodModal.booking?.restaurantId?.name} • Slot: {addFoodModal.booking?.timeSlot}
+                </p>
+              </div>
+              <button
+                onClick={() => setAddFoodModal({ isOpen: false, booking: null, menuItems: [], cart: {}, loadingMenu: false, submitting: false })}
+                className="p-2 rounded-full bg-sand-100 hover:bg-sand-200 text-slate-600 font-extrabold text-xs cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {addFoodModal.loadingMenu ? (
+              <div className="py-12 text-center text-slate-500 text-xs">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-forest-800 border-t-transparent mx-auto mb-3" />
+                Loading restaurant digital menu...
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+                {/* Menu items list */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {addFoodModal.menuItems.map((item) => {
+                    const fullKey = `${item._id}_full`;
+                    const halfKey = `${item._id}_half`;
+                    const fullQty = addFoodModal.cart[fullKey]?.quantity || 0;
+                    const halfQty = addFoodModal.cart[halfKey]?.quantity || 0;
+
+                    return (
+                      <div key={item._id} className="bg-sand-50 p-3.5 rounded-2xl border border-sand-200 flex flex-col justify-between space-y-2">
+                        <div className="flex items-start gap-2.5">
+                          <img src={item.image} alt={item.name} className="w-14 h-14 rounded-xl object-cover shrink-0" />
+                          <div className="space-y-0.5 flex-1">
+                            <h5 className="font-extrabold text-slate-900 text-xs">{item.name}</h5>
+                            <p className="text-[10px] text-slate-500 line-clamp-1">{item.description}</p>
+                            <p className="text-xs font-black text-forest-900">
+                              Full: ₹{item.pricing?.full || item.pricing?.default}
+                              {item.pricing?.half > 0 && <span className="text-[10px] text-slate-500 ml-1.5">Half: ₹{item.pricing.half}</span>}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-sand-200">
+                          <span className="text-[10px] font-bold text-slate-500">{item.isVeg ? '🟢 Veg' : '🔴 Non-Veg'}</span>
+                          
+                          <div className="flex items-center gap-1.5">
+                            {item.pricing?.half > 0 && (
+                              halfQty > 0 ? (
+                                <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-lg border border-sand-200 text-xs">
+                                  <button onClick={() => handleAddFoodModalCart(item, 'half', -1)} className="font-bold text-red-600 cursor-pointer">-</button>
+                                  <span className="font-extrabold text-slate-800">{halfQty} Half</span>
+                                  <button onClick={() => handleAddFoodModalCart(item, 'half', 1)} className="font-bold text-emerald-600 cursor-pointer">+</button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => handleAddFoodModalCart(item, 'half', 1)}
+                                  className="bg-sand-200 hover:bg-sand-300 text-slate-800 text-[11px] font-bold px-2 py-1 rounded-lg cursor-pointer"
+                                >
+                                  + Half
+                                </button>
+                              )
+                            )}
+
+                            {fullQty > 0 ? (
+                              <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-lg border border-sand-200 text-xs">
+                                <button onClick={() => handleAddFoodModalCart(item, 'full', -1)} className="font-bold text-red-600 cursor-pointer">-</button>
+                                <span className="font-extrabold text-slate-800">{fullQty} Full</span>
+                                <button onClick={() => handleAddFoodModalCart(item, 'full', 1)} className="font-bold text-emerald-600 cursor-pointer">+</button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleAddFoodModalCart(item, 'full', 1)}
+                                className="gradient-orange-btn text-white text-[11px] font-extrabold px-2.5 py-1 rounded-lg shadow-sm cursor-pointer"
+                              >
+                                + Full
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Modal Footer with Total */}
+            {(() => {
+              const cartList = Object.values(addFoodModal.cart);
+              const subtotal = cartList.reduce((sum, entry) => {
+                const price = entry.portion === 'half' ? entry.item.pricing.half : entry.item.pricing.full || entry.item.pricing.default;
+                return sum + price * entry.quantity;
+              }, 0);
+              const tax = Math.round(subtotal * 0.05);
+              const platformFee = subtotal > 0 ? 15 : 0;
+              const total = subtotal + tax + platformFee;
+
+              return (
+                <div className="border-t border-sand-200 pt-3 flex items-center justify-between shrink-0">
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase">Add-on Food Total</p>
+                    <p className="text-lg font-black text-terracotta-600">₹{total} <span className="text-[10px] text-slate-500 font-normal">(incl. 5% GST + ₹15 fee)</span></p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setAddFoodModal({ isOpen: false, booking: null, menuItems: [], cart: {}, loadingMenu: false, submitting: false })}
+                      className="px-4 py-2.5 rounded-xl bg-sand-100 hover:bg-sand-200 text-slate-700 text-xs font-bold cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSubmitAddFood}
+                      disabled={cartList.length === 0 || addFoodModal.submitting}
+                      className="gradient-orange-btn text-white font-extrabold px-5 py-2.5 rounded-xl shadow text-xs cursor-pointer disabled:opacity-50"
+                    >
+                      {addFoodModal.submitting ? 'Adding...' : 'Confirm & Generate Bill'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
+          </div>
+        </div>
+      )}
+
       {/* Digital Receipt Modal */}
       <DigitalReceiptModal
         isOpen={isReceiptOpen}
@@ -548,16 +918,19 @@ export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUser
         restaurant={selectedBooking?.restaurantId || selectedOrder?.restaurantId}
         user={user}
       />
-      {/* Red Logout Action at the very bottom of profile */}
-      <div className="pt-6 border-t border-sand-300">
-        <button
-          onClick={() => setShowLogoutConfirm(true)}
-          className="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold py-4 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
-        >
-          <LogOut className="w-5 h-5" />
-          Logout from Account
-        </button>
-      </div>
+
+      {/* Red Logout Action (Only shown when activeTab === 'profile') */}
+      {activeTab === 'profile' && (
+        <div className="pt-6 border-t border-sand-300">
+          <button
+            onClick={() => setShowLogoutConfirm(true)}
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold py-4 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
+          >
+            <LogOut className="w-5 h-5" />
+            Logout from Account
+          </button>
+        </div>
+      )}
 
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (

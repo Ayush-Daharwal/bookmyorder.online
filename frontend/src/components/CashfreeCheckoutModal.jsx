@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, CreditCard, ShieldCheck, CheckCircle2, Lock, ArrowRight } from 'lucide-react';
 import { createCashfreeOrderApi, verifyCashfreePaymentApi } from '../services/api';
+import { calculatePlatformFee } from '../utils/feeCalculator';
 
 export default function CashfreeCheckoutModal({ isOpen, onClose, foodOrder, booking, onSuccess }) {
   const [loading, setLoading] = useState(false);
@@ -9,7 +10,17 @@ export default function CashfreeCheckoutModal({ isOpen, onClose, foodOrder, book
 
   if (!isOpen) return null;
 
-  const totalAmount = foodOrder ? foodOrder.totalAmount : 120;
+  let totalAmount = 0;
+  if (foodOrder && foodOrder.totalAmount) {
+    totalAmount = foodOrder.totalAmount;
+  } else if (booking) {
+    const tablePrice = booking.tablePrice !== undefined ? booking.tablePrice : 100;
+    const tax = Math.round(tablePrice * 0.05);
+    const baseWithGst = tablePrice + tax;
+    const restTier = booking.restaurantId?.tier || 'premium';
+    const platformFee = calculatePlatformFee(baseWithGst, restTier);
+    totalAmount = baseWithGst + platformFee;
+  }
 
   const handlePayNow = async () => {
     setLoading(true);

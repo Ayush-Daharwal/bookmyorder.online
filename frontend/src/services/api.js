@@ -28,22 +28,26 @@ export const getRestaurantDetailsApi = (id) => API.get(`/customer/restaurants/${
 export const getRestaurantByIdApi = (id) => API.get(`/customer/restaurants/${id}`);
 export const checkRestaurantAvailabilityApi = (id, params) => API.get(`/customer/restaurants/${id}/check-availability`, { params });
 export const createBookingApi = (data) => API.post('/customer/bookings', data);
+export const addFoodToBookingApi = (bookingId, data) => API.post(`/customer/bookings/${bookingId}/add-food`, data);
 export const getMyHistoryApi = () => API.get('/customer/my-history');
 export const addReviewApi = (data) => API.post('/customer/reviews', data);
 
-// Provider APIs
+// Provider & Partner Application APIs
+export const submitRestaurantApplicationApi = (data) => API.post('/provider/register-application', data);
+export const partnerLoginApi = (data) => API.post('/provider/partner-login', data);
+export const getPartnerAnalyticsApi = () => API.get('/provider/partner-analytics');
 export const registerProviderApi = (data) => API.post('/provider/register', data);
-export const registerRestaurantApi = (data) => API.post('/provider/register', data);
+export const registerRestaurantApi = (data) => API.post('/provider/register-restaurant', data);
 export const getMyRestaurantApi = () => API.get('/provider/my-restaurant');
-export const saveMenuItemApi = (data) => API.post('/provider/menu-item', data);
-export const addMenuItemApi = (data) => API.post('/provider/menu-item', data);
-export const getMenuByRestaurantApi = (restaurantId) => API.get(`/customer/restaurants/${restaurantId}`);
-export const deleteMenuItemApi = (id) => API.delete(`/provider/menu-item/${id}`);
+export const saveMenuItemApi = (data) => API.post('/provider/menu-items', data);
+export const addMenuItemApi = (data) => API.post('/provider/menu-items', data);
+export const getMenuByRestaurantApi = (restaurantId) => API.get(`/provider/menu-items/${restaurantId}`);
+export const deleteMenuItemApi = (id) => API.delete(`/provider/menu-items/${id}`);
 export const getKdsFeedApi = () => API.get('/provider/kds');
-export const getKdsOrdersApi = () => API.get('/provider/kds');
+export const getKdsOrdersApi = (restaurantId) => API.get(`/provider/kds/${restaurantId}`);
 export const updateOrderStatusApi = (orderId, status) => API.patch(`/provider/orders/${orderId}/status`, { status });
-export const createWalkInOrderApi = (data) => API.post('/provider/walkin-order', data);
-export const createWalkInBookingApi = (data) => API.post('/provider/walkin-order', data);
+export const createWalkInOrderApi = (data) => API.post('/provider/walkin-booking', data);
+export const createWalkInBookingApi = (data) => API.post('/provider/walkin-booking', data);
 
 // Payment APIs
 export const createCashfreeOrderApi = (data) => API.post('/payments/create-order', data);
@@ -56,6 +60,10 @@ export const updateRestaurantStatusApi = (id, data) => API.patch(`/admin/restaur
 export const getAdminReviewsApi = () => API.get('/admin/reviews');
 export const deleteAdminReviewApi = (id) => API.delete(`/admin/reviews/${id}`);
 export const getAdminUsersApi = () => API.get('/admin/users');
+export const getPendingApplicationsApi = () => API.get('/admin/restaurant-applications');
+export const approveRestaurantApplicationApi = (id) => API.post(`/admin/approve-restaurant-application/${id}`);
+export const rejectRestaurantApplicationApi = (id, data) => API.post(`/admin/reject-restaurant-application/${id}`, data);
 
 // Gemini AI Assistant API
 export const getAiRecommendationApi = (data) => API.post('/ai/recommend', data);
+

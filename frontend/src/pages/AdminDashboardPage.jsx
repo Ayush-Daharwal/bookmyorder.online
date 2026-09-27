@@ -34,16 +34,21 @@ import {
   getAdminReviewsApi,
   deleteAdminReviewApi,
   getAdminUsersApi,
+  getPendingApplicationsApi,
+  approveRestaurantApplicationApi,
+  rejectRestaurantApplicationApi,
 } from '../services/api';
 
 export default function AdminDashboardPage({ adminUser, onLogout }) {
-  const [activeTab, setActiveTab] = useState('analytics'); // 'analytics', 'restaurants', 'reviews', 'users'
+  const [activeTab, setActiveTab] = useState('analytics'); // 'analytics', 'applications', 'restaurants', 'reviews', 'users'
   const [metrics, setMetrics] = useState(null);
   const [charts, setCharts] = useState(null);
   const [restaurants, setRestaurants] = useState([]);
+  const [applications, setApplications] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [actionMsg, setActionMsg] = useState('');
 
   useEffect(() => {
     fetchAdminData();
@@ -52,9 +57,10 @@ export default function AdminDashboardPage({ adminUser, onLogout }) {
   const fetchAdminData = async () => {
     setLoading(true);
     try {
-      const [metricsRes, restRes, revRes, userRes] = await Promise.all([
+      const [metricsRes, restRes, appRes, revRes, userRes] = await Promise.all([
         getAdminMetricsApi(),
         getAdminRestaurantsApi(),
+        getPendingApplicationsApi(),
         getAdminReviewsApi(),
         getAdminUsersApi(),
       ]);
@@ -62,6 +68,7 @@ export default function AdminDashboardPage({ adminUser, onLogout }) {
       setMetrics(metricsRes.data.metrics);
       setCharts(metricsRes.data.charts);
       setRestaurants(restRes.data.restaurants || []);
+      setApplications(appRes.data.applications || []);
       setReviews(revRes.data.reviews || []);
       setUsers(userRes.data.users || []);
     } catch (err) {
@@ -70,6 +77,17 @@ export default function AdminDashboardPage({ adminUser, onLogout }) {
       setLoading(false);
     }
   };
+
+  const handleApproveApplication = async (appId) => {
+    try {
+      const res = await approveRestaurantApplicationApi(appId);
+      setActionMsg(res.data.message || 'Restaurant application approved! Email and SMS sent.');
+      fetchAdminData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Approve application failed');
+    }
+  };
+
 
   const handleToggleStatus = async (restaurantId, currentVerified) => {
     try {
@@ -138,13 +156,23 @@ export default function AdminDashboardPage({ adminUser, onLogout }) {
         </button>
 
         <button
+          onClick={() => setActiveTab('applications')}
+          className={`px-5 py-2.5 rounded-2xl transition-all flex items-center gap-2 ${
+            activeTab === 'applications' ? 'bg-[#14382B] text-white shadow' : 'bg-white text-slate-700 hover:bg-sand-100'
+          }`}
+        >
+          <Layers className="w-4 h-4 text-emerald-400" />
+          Pending Applications ({applications.filter(a => a.status === 'pending').length})
+        </button>
+
+        <button
           onClick={() => setActiveTab('restaurants')}
           className={`px-5 py-2.5 rounded-2xl transition-all flex items-center gap-2 ${
             activeTab === 'restaurants' ? 'bg-[#14382B] text-white shadow' : 'bg-white text-slate-700 hover:bg-sand-100'
           }`}
         >
           <Store className="w-4 h-4 text-[#FF5722]" />
-          Partner Verification ({restaurants.length})
+          Verified Partners ({restaurants.length})
         </button>
 
         <button
@@ -307,6 +335,106 @@ export default function AdminDashboardPage({ adminUser, onLogout }) {
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* Action Message Alert */}
+      {actionMsg && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-950 font-bold text-xs rounded-2xl flex items-center justify-between">
+          <span>✨ {actionMsg}</span>
+          <button onClick={() => setActionMsg('')} className="text-emerald-800 text-xs">Dismiss</button>
+        </div>
+      )}
+
+      {/* TAB: PENDING RESTAURANT APPLICATIONS */}
+      {activeTab === 'applications' && (
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-sand-200 space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="font-extrabold text-slate-900 text-lg">Pending Restaurant Applications</h3>
+              <p className="text-xs text-slate-500">Review partner applications in Bhopal and approve to trigger Email & SMS credentials.</p>
+            </div>
+            <span className="bg-amber-100 text-amber-900 text-xs font-bold px-3 py-1 rounded-full">
+              {applications.filter(a => a.status === 'pending').length} Action Required
+            </span>
+          </div>
+
+          {applications.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-xs bg-sand-50 rounded-2xl border border-sand-200">
+              No pending restaurant applications found.
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {applications.map((app) => (
+                <div key={app._id} className="p-5 bg-[#FAF8F5] rounded-3xl border border-sand-200 space-y-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-sand-200 pb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-slate-900 text-base">{app.restaurantName}</span>
+                        <span className="bg-forest-900 text-white font-extrabold text-[10px] px-2.5 py-0.5 rounded-full capitalize">
+                          Category: {app.category}
+                        </span>
+                        <span className="bg-emerald-100 text-emerald-800 font-bold text-[10px] px-2 py-0.5 rounded-full">
+                          {app.foodType}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">Manager: <strong>{app.managerName}</strong> | Phone: <strong>{app.managerPhone}</strong> | Email: <strong>{app.email}</strong></p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {app.status === 'pending' ? (
+                        <button
+                          onClick={() => handleApproveApplication(app._id)}
+                          className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          Approve & Notify (Email + SMS)
+                        </button>
+                      ) : (
+                        <span className="px-4 py-1.5 bg-emerald-100 text-emerald-800 font-black text-xs rounded-xl capitalize">
+                          Status: {app.status} ✔
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Details Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs bg-white p-3.5 rounded-2xl border border-sand-200">
+                    <div>
+                      <span className="text-slate-400 font-bold text-[10px] uppercase block">City & Address</span>
+                      <span className="font-semibold text-slate-800">{app.address}, {app.city}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 font-bold text-[10px] uppercase block">Owner Aadhaar</span>
+                      <span className="font-semibold text-slate-800">{app.ownerAadhaar}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 font-bold text-[10px] uppercase block">Licenses</span>
+                      <span className="font-semibold text-slate-800">GST: {app.gstin || 'N/A'} | FSSAI: {app.fssaiNumber || 'N/A'}</span>
+                    </div>
+                  </div>
+
+                  {/* 6 Photos Preview */}
+                  {app.photos && (
+                    <div>
+                      <p className="text-xs font-bold text-slate-700 mb-2">Attached 6 Registration Photos (Banner + 5 Live Captures):</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+                        {Object.entries(app.photos).map(([key, imgUrl], idx) => (
+                          <div key={idx} className="relative rounded-xl overflow-hidden border border-sand-200 bg-sand-100 h-20 group">
+                            <img src={imgUrl} alt={key} className="w-full h-full object-cover" />
+                            <span className="absolute bottom-0 inset-x-0 bg-slate-900/80 text-white text-[9px] font-bold text-center py-0.5 capitalize truncate px-1">
+                              {key}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

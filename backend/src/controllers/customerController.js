@@ -163,15 +163,39 @@ export const getRestaurantById = async (req, res) => {
   }
 };
 
+const calculateServerPlatformFee = (baseWithGst, tier = 'premium') => {
+  const amount = Number(baseWithGst) || 0;
+  if (amount <= 0) return 0;
+
+  if (tier === 'canteen') {
+    if (amount <= 50) return 0;
+    if (amount <= 200) {
+      const fee = Math.floor(amount * 0.01);
+      return Math.max(0, fee);
+    }
+    if (amount <= 500) return 5;
+    return Math.floor(amount * 0.015);
+  } else {
+    // Casual / Premium / Luxury
+    if (amount <= 100) return 0;
+    if (amount <= 500) return 15;
+    if (amount <= 1000) return 20;
+    return Math.floor(amount * 0.02);
+  }
+};
+
 // @desc    Create Table Reservation & Food Prebook
 // @route   POST /api/customer/bookings
 export const createBooking = async (req, res) => {
   try {
-    const { restaurantId, mode, bookingDate, timeSlot, guestCount, specialRequests, items, prepTargetTime } = req.body;
+    const { restaurantId, mode, bookingDate, timeSlot, guestCount, durationMinutes, tablePrice, specialRequests, items, prepTargetTime } = req.body;
 
     if (!restaurantId || !mode || !bookingDate || !timeSlot) {
       return res.status(400).json({ message: 'Restaurant, mode, date, and time slot are required' });
     }
+
+    const restaurantObj = await Restaurant.findById(restaurantId);
+    const restTier = restaurantObj?.tier || 'premium';
 
     // Verify availability unless it is canteen preorder
     if (mode !== 'canteen_preorder') {
@@ -190,6 +214,8 @@ export const createBooking = async (req, res) => {
     const bookingId = 'BMO-B-' + Math.floor(100000 + Math.random() * 900000);
     let foodOrder = null;
 
+    const computedTablePrice = (mode === 'table_only' || mode === 'table_and_food') ? (tablePrice !== undefined ? tablePrice : 100) : 0;
+
     if (items && items.length > 0) {
       const orderId = 'BMO-O-' + Math.floor(100000 + Math.random() * 900000);
       const subtotal = items.reduce((sum, item) => {
@@ -197,9 +223,11 @@ export const createBooking = async (req, res) => {
         return sum + itemPrice * item.quantity;
       }, 0);
 
-      const tax = Math.round(subtotal * 0.05); // GST 5%
-      const platformFee = 15;
-      const totalAmount = subtotal + tax + platformFee;
+      const baseAmount = subtotal + computedTablePrice;
+      const tax = Math.round(baseAmount * 0.05); // GST 5%
+      const baseWithGst = baseAmount + tax;
+      const platformFee = calculateServerPlatformFee(baseWithGst, restTier);
+      const totalAmount = baseWithGst + platformFee;
 
       const orderItems = items.map((i) => ({
         menuItemId: i._id,
@@ -235,6 +263,8 @@ export const createBooking = async (req, res) => {
       bookingDate,
       timeSlot,
       guestCount: guestCount || 2,
+      durationMinutes: durationMinutes || 60,
+      tablePrice: tablePrice !== undefined ? tablePrice : 100,
       tableNumber,
       specialRequests: specialRequests || '',
       foodOrderId: foodOrder ? foodOrder._id : null,
@@ -252,6 +282,108 @@ export const createBooking = async (req, res) => {
       message: 'Booking request created successfully!',
       booking: populatedBooking,
       foodOrder: populatedFoodOrder || foodOrder,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Add Food Items to Existing Active Table Booking (Allowed up to 2 min before table time ends)
+// @route   POST /api/customer/bookings/:id/add-food
+export const addFoodToBooking = async (req, res) => {
+  try {
+    const { items } = req.body;
+    const booking = await TableBooking.findById(req.params.id).populate('restaurantId');
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    if (!items || items.length === 0) {
+      return res.status(400).json({ message: 'Please select at least one food item' });
+    }
+
+    // Check if within 2 minutes of table ending time
+    // Parse bookingDate and timeSlot
+    const match = (booking.timeSlot || '').match(/(\d+):(\d+)\s*(AM|PM)?/i);
+    let hours = 19, mins = 30;
+    if (match) {
+      hours = parseInt(match[1]);
+      mins = parseInt(match[2]);
+      const ampm = match[3];
+      if (ampm) {
+        if (ampm.toUpperCase() === 'PM' && hours < 12) hours += 12;
+        if (ampm.toUpperCase() === 'AM' && hours === 12) hours = 0;
+      }
+    }
+
+    const [yr, mo, dy] = (booking.bookingDate || new Date().toISOString().split('T')[0]).split('-').map(Number);
+    const startDate = new Date(yr, mo - 1, dy, hours, mins, 0);
+    const durationMins = booking.durationMinutes || 60;
+    const endDate = new Date(startDate.getTime() + durationMins * 60 * 1000);
+    const cutoffTime = new Date(endDate.getTime() - 2 * 60 * 1000); // 2 mins cutoff
+
+    const now = new Date();
+
+    // Check if cutoff has passed for today's booking
+    const isToday = now.toISOString().split('T')[0] === booking.bookingDate;
+    if (isToday && now > cutoffTime) {
+      return res.status(400).json({
+        message: 'Food order window closed! You can only add food items until 2 minutes before your reserved table time ends.',
+        isClosed: true
+      });
+    }
+
+    const orderId = 'BMO-ADD-' + Math.floor(100000 + Math.random() * 900000);
+    const subtotal = items.reduce((sum, item) => {
+      const itemPrice = item.portion === 'half' ? item.pricing.half : item.portion === 'full' ? item.pricing.full : item.pricing.default;
+      return sum + itemPrice * item.quantity;
+    }, 0);
+
+    const restTier = booking.restaurantId?.tier || 'premium';
+    const tax = Math.round(subtotal * 0.05); // GST 5%
+    const baseWithGst = subtotal + tax;
+    const platformFee = calculateServerPlatformFee(baseWithGst, restTier);
+    const totalAmount = baseWithGst + platformFee;
+
+    const orderItems = items.map((i) => ({
+      menuItemId: i._id,
+      name: i.name,
+      portion: i.portion || 'default',
+      price: i.portion === 'half' ? i.pricing.half : i.portion === 'full' ? i.pricing.full : i.pricing.default,
+      quantity: i.quantity,
+      customNote: i.customNote || '',
+    }));
+
+    const addonOrder = await FoodOrder.create({
+      orderId,
+      userId: req.user._id,
+      restaurantId: booking.restaurantId._id || booking.restaurantId,
+      items: orderItems,
+      subtotal,
+      tax,
+      platformFee,
+      totalAmount,
+      paymentStatus: 'pending',
+      prepTargetTime: booking.timeSlot,
+    });
+
+    if (!booking.addonFoodOrders) {
+      booking.addonFoodOrders = [];
+    }
+    booking.addonFoodOrders.push(addonOrder._id);
+    await booking.save();
+
+    const populatedAddonOrder = await FoodOrder.findById(addonOrder._id).populate('restaurantId');
+    const updatedBooking = await TableBooking.findById(booking._id)
+      .populate('restaurantId')
+      .populate('foodOrderId')
+      .populate('addonFoodOrders');
+
+    res.json({
+      success: true,
+      message: 'Add-on food order added to reserved table successfully!',
+      booking: updatedBooking,
+      foodOrder: populatedAddonOrder,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

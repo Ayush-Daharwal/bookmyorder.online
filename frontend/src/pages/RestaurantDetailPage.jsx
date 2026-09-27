@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Utensils, Calendar, Clock, Users, ShieldCheck, MapPin, ChevronLeft,
+  Utensils, Calendar, Clock, Users, ShieldCheck, MapPin, ChevronLeft, ChevronRight,
   Plus, Minus, ShoppingBag, CheckCircle2, AlertCircle, Sparkles, MessageSquare, Search, Filter
 } from 'lucide-react';
 import { getRestaurantByIdApi, createBookingApi, checkRestaurantAvailabilityApi } from '../services/api';
@@ -9,6 +9,7 @@ import DigitalReceiptModal from '../components/DigitalReceiptModal';
 import PastTimeModal from '../components/PastTimeModal';
 import TableUnavailableModal from '../components/TableUnavailableModal';
 import { isPastDateTime } from '../utils/dateUtils';
+import { calculatePlatformFee } from '../utils/feeCalculator';
 
 export default function RestaurantDetailPage({
   restaurantId,
@@ -22,11 +23,16 @@ export default function RestaurantDetailPage({
   const getTodayString = () => new Date().toISOString().split('T')[0];
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [mode, setMode] = useState('table_and_food'); // 'table_and_food', 'table_only', 'canteen_preorder'
+  const [mode, setMode] = useState('table_only'); // 'table_only', 'table_and_food', 'canteen_preorder'
   const [bookingDate, setBookingDate] = useState(initialDate || getTodayString());
   const [timeSlot, setTimeSlot] = useState(initialTime || '07:30 PM');
   const [guestCount, setGuestCount] = useState(initialGuests ? parseInt(initialGuests) || 2 : 2);
+  const [durationMinutes, setDurationMinutes] = useState(60); // 15, 30, 45, 60, or custom minutes
+  const [customDuration, setCustomDuration] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
+
+  // Restaurant Image Slideshow State (6 Photos Bounded)
+  const [activePhotoIdx, setActivePhotoIdx] = useState(0);
 
   // Modals for Past Time & Fully Booked Table
   const [isPastTimeModalOpen, setIsPastTimeModalOpen] = useState(false);
@@ -62,6 +68,8 @@ export default function RestaurantDetailPage({
       setData(res.data);
       if (res.data.restaurant?.tier === 'canteen') {
         setMode('canteen_preorder');
+      } else {
+        setMode('table_only');
       }
     } catch (err) {
       console.error('Fetch error:', err);
@@ -128,15 +136,55 @@ export default function RestaurantDetailPage({
     }
   };
 
-  // Calculate Subtotal & Taxes
+  // 1. Dynamic Table Price calculation according to booking time & duration
+  const activeDurationMinutes = durationMinutes === 'custom' ? (parseInt(customDuration) || 60) : (parseInt(durationMinutes) || 60);
+  const baseHourlyRate = 100;
+  let calculatedTableRate = Math.max(20, Math.round((activeDurationMinutes / 60) * baseHourlyRate));
+
+  // Peak evening slots (07:00 PM - 10:00 PM)
+  const isPeakSlot = timeSlot && (timeSlot.includes('07:') || timeSlot.includes('08:') || timeSlot.includes('09:') || timeSlot.includes('10:')) && timeSlot.toLowerCase().includes('pm');
+  if (isPeakSlot) {
+    calculatedTableRate = Math.round(calculatedTableRate * 1.2);
+  }
+
+  const tablePrice = (mode === 'table_only' || mode === 'table_and_food') ? calculatedTableRate : 0;
+
+  // Calculate Subtotal, Table Charge & Taxes & Platform Fee accurately
   const cartItemsList = Object.values(cart);
-  const subtotal = cartItemsList.reduce((sum, entry) => {
+  const itemsSubtotal = cartItemsList.reduce((sum, entry) => {
     const price = entry.portion === 'half' ? entry.item.pricing.half : entry.item.pricing.full || entry.item.pricing.default;
     return sum + price * entry.quantity;
   }, 0);
-  const tax = Math.round(subtotal * 0.05); // GST 5%
-  const platformFee = subtotal > 0 ? 15 : 0;
-  const grandTotal = subtotal + tax + platformFee;
+
+  const restTier = data?.restaurant?.tier || 'premium';
+
+  let subtotal = 0;
+  let tax = 0;
+  let platformFee = 0;
+  let grandTotal = 0;
+
+  if (mode === 'table_only') {
+    subtotal = 0;
+    const base = tablePrice;
+    tax = Math.round(base * 0.05);
+    const baseWithGst = base + tax;
+    platformFee = calculatePlatformFee(baseWithGst, restTier);
+    grandTotal = baseWithGst + platformFee;
+  } else if (mode === 'table_and_food') {
+    subtotal = itemsSubtotal;
+    const base = tablePrice + itemsSubtotal;
+    tax = Math.round(base * 0.05);
+    const baseWithGst = base + tax;
+    platformFee = calculatePlatformFee(baseWithGst, restTier);
+    grandTotal = baseWithGst + platformFee;
+  } else {
+    // canteen_preorder mode
+    subtotal = itemsSubtotal;
+    tax = Math.round(itemsSubtotal * 0.05);
+    const baseWithGst = itemsSubtotal + tax;
+    platformFee = calculatePlatformFee(baseWithGst, restTier);
+    grandTotal = baseWithGst + platformFee;
+  }
 
   const handleInitiateBooking = async () => {
     if (!user) {
@@ -148,6 +196,18 @@ export default function RestaurantDetailPage({
       setIsPastTimeModalOpen(true);
       return;
     }
+
+    if (mode === 'canteen_preorder' && cartItemsList.length === 0) {
+      alert('Please select at least 1 food item to pre-order.');
+      return;
+    }
+
+    if (mode === 'table_and_food' && cartItemsList.length === 0) {
+      alert('You have selected "Book Table + Pre-Order Food" but your cart is empty. Please add dishes from the menu below or switch to "Book Only Table".');
+      return;
+    }
+
+    const finalDurationNum = durationMinutes === 'custom' ? (parseInt(customDuration) || 60) : (parseInt(durationMinutes) || 60);
 
     try {
       const itemsPayload = cartItemsList.map((entry) => ({
@@ -165,12 +225,21 @@ export default function RestaurantDetailPage({
         bookingDate,
         timeSlot,
         guestCount,
+        durationMinutes: finalDurationNum,
+        tablePrice: (mode === 'table_only' || mode === 'table_and_food') ? tablePrice : 0,
         specialRequests,
         items: itemsPayload,
         prepTargetTime: timeSlot,
       });
 
-      setCreatedBooking(res.data.booking);
+      const bookingObj = {
+        ...(res.data.booking || {}),
+        restaurantId: res.data.booking?.restaurantId || data?.restaurant,
+        durationMinutes: finalDurationNum,
+        tablePrice: (mode === 'table_only' || mode === 'table_and_food') ? tablePrice : 0,
+      };
+
+      setCreatedBooking(bookingObj);
       setCreatedOrder(res.data.foodOrder);
       setIsCheckoutOpen(true);
     } catch (err) {
@@ -221,32 +290,94 @@ export default function RestaurantDetailPage({
         Back to Restaurants
       </button>
 
-      {/* Restaurant Header Card */}
-      <div className="bg-white rounded-3xl overflow-hidden shadow-md border border-sand-200 mb-8">
-        <div className="relative h-64 sm:h-80 bg-slate-900">
-          <img
-            src={restaurant.photos?.[0] || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&q=80&w=800'}
-            alt={restaurant.name}
-            className="w-full h-full object-cover opacity-90"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
-          
-          <div className="absolute bottom-6 left-6 right-6 text-white flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
-            <div>
-              <span className="bg-terracotta-500 text-white text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block shadow">
-                {restaurant.tier} Tier Operating Mode
-              </span>
-              <h1 className="text-2xl sm:text-4xl font-extrabold">{restaurant.name}</h1>
-              <p className="text-sand-200 text-xs sm:text-sm mt-1">{restaurant.tagline}</p>
-            </div>
-            
-            <div className="bg-white/90 backdrop-blur-md text-slate-900 px-4 py-2 rounded-2xl border border-white/50 text-center shadow-lg">
-              <p className="text-xl font-extrabold text-terracotta-600">★ {restaurant.rating || 4.5}</p>
-              <p className="text-[10px] text-slate-500 font-semibold">{restaurant.ratingCount || 128} verified reviews</p>
+      {/* Restaurant Header Manual Slideshow Card (6 Bounded Photos) */}
+      {(() => {
+        const slideshowPhotos = [
+          { url: restaurant.photos?.[0] || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&q=80&w=800', title: '1/6 Main Restaurant View' },
+          { url: restaurant.photos?.[1] || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&q=80&w=800', title: '2/6 Restaurant Front Entrance' },
+          { url: restaurant.photos?.[2] || 'https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?auto=format&fit=crop&q=80&w=800', title: '3/6 Dining Hall & Table Area' },
+          { url: restaurant.photos?.[3] || 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&q=80&w=800', title: '4/6 Hygienic Kitchen Area' },
+          { url: restaurant.photos?.[4] || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800', title: '5/6 Signature Served Dish Plate' },
+          { url: restaurant.photos?.[5] || 'https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&q=80&w=800', title: '6/6 Official Digital Menu Card' },
+        ];
+        const currentPhoto = slideshowPhotos[activePhotoIdx] || slideshowPhotos[0];
+
+        return (
+          <div className="bg-white rounded-3xl overflow-hidden shadow-md border border-sand-200 mb-8 relative">
+            <div className="relative h-72 sm:h-96 bg-slate-900 transition-all duration-300">
+              <img
+                src={currentPhoto.url}
+                alt={currentPhoto.title}
+                className="w-full h-full object-cover opacity-90 transition-opacity duration-300"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent" />
+              
+              {/* Photo Title & Index Badge (Top Left) */}
+              <div className="absolute top-4 left-4 z-20">
+                <span className="bg-slate-950/80 text-amber-400 text-xs font-black px-3 py-1.5 rounded-full border border-amber-400/30 backdrop-blur-md shadow-lg flex items-center gap-1.5">
+                  📷 {currentPhoto.title}
+                </span>
+              </div>
+
+              {/* Manual Nav Prev/Next Buttons (Top Right, Bounded 1 to 6) */}
+              <div className="absolute top-4 right-4 flex items-center gap-2 z-20">
+                <button
+                  type="button"
+                  disabled={activePhotoIdx === 0}
+                  onClick={() => setActivePhotoIdx((prev) => Math.max(0, prev - 1))}
+                  className="p-2 rounded-full bg-slate-950/80 hover:bg-slate-950 text-white backdrop-blur-md transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed border border-white/20 shadow-md"
+                  title="Previous Photo (6 <- 5 <- 4...)"
+                >
+                  <ChevronLeft className="w-5 h-5 stroke-[2.5]" />
+                </button>
+                <span className="text-xs font-black text-white px-2 py-1 bg-slate-950/70 rounded-lg backdrop-blur-md">
+                  {activePhotoIdx + 1} / 6
+                </span>
+                <button
+                  type="button"
+                  disabled={activePhotoIdx === slideshowPhotos.length - 1}
+                  onClick={() => setActivePhotoIdx((prev) => Math.min(slideshowPhotos.length - 1, prev + 1))}
+                  className="p-2 rounded-full bg-slate-950/80 hover:bg-slate-950 text-white backdrop-blur-md transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed border border-white/20 shadow-md"
+                  title="Next Photo (1 -> 2 -> 3...)"
+                >
+                  <ChevronRight className="w-5 h-5 stroke-[2.5]" />
+                </button>
+              </div>
+
+              {/* Bottom Info Overlay */}
+              <div className="absolute bottom-6 left-6 right-6 text-white flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 z-10">
+                <div>
+                  <span className="bg-terracotta-500 text-white text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block shadow">
+                    {restaurant.tier} Tier Operating Mode
+                  </span>
+                  <h1 className="text-2xl sm:text-4xl font-extrabold">{restaurant.name}</h1>
+                  <p className="text-sand-200 text-xs sm:text-sm mt-1">{restaurant.tagline}</p>
+                </div>
+                
+                <div className="bg-white/90 backdrop-blur-md text-slate-900 px-4 py-2 rounded-2xl border border-white/50 text-center shadow-lg">
+                  <p className="text-xl font-extrabold text-terracotta-600">★ {restaurant.rating || 4.5}</p>
+                  <p className="text-[10px] text-slate-500 font-semibold">{restaurant.ratingCount || 128} verified reviews</p>
+                </div>
+              </div>
+
+              {/* Bottom Slide Thumbnails Strip (Manual Clickable 1-6) */}
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20 bg-slate-950/60 p-1.5 rounded-full backdrop-blur-md border border-white/10">
+                {slideshowPhotos.map((ph, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setActivePhotoIdx(idx)}
+                    className={`h-2 rounded-full transition-all cursor-pointer ${
+                      activePhotoIdx === idx ? 'w-6 bg-amber-400' : 'w-2 bg-white/50 hover:bg-white'
+                    }`}
+                    title={ph.title}
+                  />
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Grid: 3-Mode Booking Engine & Digital Menu */}
       <div id="digital-menu-section" className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -254,7 +385,7 @@ export default function RestaurantDetailPage({
         {/* Left 2 Cols: Mode Selector & Digital Menu UI */}
         <div className="lg:col-span-2 space-y-8">
           
-          {/* Mode Info Banner (Manual Workflow Choice Removed as requested) */}
+          {/* Mode Info Banner & Interactive Mode Switcher */}
           {restaurant.tier === 'canteen' ? (
             <div className="bg-orange-50 border border-orange-200 rounded-3xl p-5 shadow-sm flex items-center justify-between">
               <div>
@@ -270,18 +401,148 @@ export default function RestaurantDetailPage({
               </span>
             </div>
           ) : (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-3xl p-5 shadow-sm flex items-center justify-between">
-              <div>
-                <h3 className="font-extrabold text-[#14382B] text-base flex items-center gap-2">
-                  <Utensils className="w-5 h-5 text-[#14382B]" /> Table Reservation & Pre-Order Menu
+            <div className="bg-white rounded-3xl p-5 shadow-md border border-sand-200 space-y-4">
+              <div className="flex items-center justify-between border-b border-sand-200 pb-3">
+                <h3 className="font-extrabold text-forest-900 text-base flex items-center gap-2">
+                  <Utensils className="w-5 h-5 text-[#14382B]" /> Choose Booking Option
                 </h3>
-                <p className="text-xs text-slate-600 mt-1">
-                  Reserve your table and pre-order your favorite dishes ahead to enjoy zero wait time upon arrival.
+                <span className="text-[11px] font-extrabold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                  {mode === 'table_only' ? '🪑 Book Only Table (Food Optional)' : '🍽️ Book Table + Pre-Order Food'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  onClick={() => setMode('table_only')}
+                  className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
+                    mode === 'table_only'
+                      ? 'bg-[#14382B] text-white border-[#14382B] shadow-lg ring-2 ring-[#14382B]/20'
+                      : 'bg-sand-50 text-slate-800 border-sand-200 hover:bg-sand-100'
+                  }`}
+                >
+                  <div className="space-y-1">
+                    <span className="font-black text-sm flex items-center gap-1.5">
+                      🪑 Book Only Table
+                    </span>
+                    <p className={`text-xs ${mode === 'table_only' ? 'text-sand-200' : 'text-slate-500'}`}>
+                      Reserve table for 15, 30, 45, or 60 min. Food is completely optional!
+                    </p>
+                  </div>
+                  <span className={`text-[10px] font-extrabold mt-3 px-2.5 py-1 rounded-lg inline-block w-max ${
+                    mode === 'table_only' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-900'
+                  }`}>
+                    Table Fee: ₹{tablePrice}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setMode('table_and_food')}
+                  className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
+                    mode === 'table_and_food'
+                      ? 'bg-[#14382B] text-white border-[#14382B] shadow-lg ring-2 ring-[#14382B]/20'
+                      : 'bg-sand-50 text-slate-800 border-sand-200 hover:bg-sand-100'
+                  }`}
+                >
+                  <div className="space-y-1">
+                    <span className="font-black text-sm flex items-center gap-1.5">
+                      🍲 Book Table + Pre-Order Food
+                    </span>
+                    <p className={`text-xs ${mode === 'table_and_food' ? 'text-sand-200' : 'text-slate-500'}`}>
+                      Reserve table and pre-order dishes from menu for zero-wait serving upon arrival.
+                    </p>
+                  </div>
+                  <span className={`text-[10px] font-extrabold mt-3 px-2.5 py-1 rounded-lg inline-block w-max ${
+                    mode === 'table_and_food' ? 'bg-white/20 text-white' : 'bg-orange-100 text-orange-900'
+                  }`}>
+                    Table + Food Bill
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Book Only Table Option: Render Table Photos Showcase Gallery (Requirement 6) */}
+          {mode === 'table_only' && (
+            <div className="bg-white rounded-3xl p-6 shadow-md border border-sand-200 space-y-5">
+              <div className="border-b border-sand-200 pb-3">
+                <h3 className="font-extrabold text-forest-900 text-lg flex items-center gap-2">
+                  🪑 Restaurant Table Showcase & Seating Gallery
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Explore available table seating layouts provided by {restaurant.name}. Your reserved table is guaranteed upon confirmation.
                 </p>
               </div>
-              <span className="bg-[#14382B] text-white text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider shadow whitespace-nowrap">
-                Table + Food
-              </span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Photo 1: Table Hall Photo */}
+                <div className="bg-sand-50 rounded-2xl overflow-hidden border border-sand-200 shadow-sm flex flex-col hover:shadow-md transition-shadow">
+                  <div className="relative h-44 bg-slate-900">
+                    <img
+                      src={restaurant.photos?.[2] || 'https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?auto=format&fit=crop&q=80&w=800'}
+                      alt="Main Dining Table Hall"
+                      className="w-full h-full object-cover"
+                    />
+                    <span className="absolute top-2 left-2 bg-slate-950/80 backdrop-blur-md text-amber-400 text-[10px] font-black px-2.5 py-1 rounded-full border border-amber-400/30">
+                      Photo 1: Table Hall View
+                    </span>
+                  </div>
+                  <div className="p-3.5 flex-1 flex flex-col justify-between space-y-2">
+                    <div>
+                      <h4 className="font-extrabold text-slate-900 text-xs">Spacious Dining Hall Area</h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Air-conditioned central hall with premium wooden tables and ambient lighting.</p>
+                    </div>
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 w-max">
+                      Family & Group Dining
+                    </span>
+                  </div>
+                </div>
+
+                {/* Photo 2: Particular Table Photo */}
+                <div className="bg-sand-50 rounded-2xl overflow-hidden border border-sand-200 shadow-sm flex flex-col hover:shadow-md transition-shadow">
+                  <div className="relative h-44 bg-slate-900">
+                    <img
+                      src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&q=80&w=800"
+                      alt="Particular 4-Seater Table"
+                      className="w-full h-full object-cover"
+                    />
+                    <span className="absolute top-2 left-2 bg-slate-950/80 backdrop-blur-md text-amber-400 text-[10px] font-black px-2.5 py-1 rounded-full border border-amber-400/30">
+                      Photo 2: Particular Table Setup
+                    </span>
+                  </div>
+                  <div className="p-3.5 flex-1 flex flex-col justify-between space-y-2">
+                    <div>
+                      <h4 className="font-extrabold text-slate-900 text-xs">Particular Reserved Table</h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Cushioned ergonomic seating with priority table service upon arrival.</p>
+                    </div>
+                    <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 w-max">
+                      Priority Reserved Seat
+                    </span>
+                  </div>
+                </div>
+
+                {/* Photo 3: Different Location Table Photo */}
+                <div className="bg-sand-50 rounded-2xl overflow-hidden border border-sand-200 shadow-sm flex flex-col hover:shadow-md transition-shadow">
+                  <div className="relative h-44 bg-slate-900">
+                    <img
+                      src="https://images.unsplash.com/photo-1578474846511-04ba529f0b88?auto=format&fit=crop&q=80&w=800"
+                      alt="Window & Outdoor Table"
+                      className="w-full h-full object-cover"
+                    />
+                    <span className="absolute top-2 left-2 bg-slate-950/80 backdrop-blur-md text-amber-400 text-[10px] font-black px-2.5 py-1 rounded-full border border-amber-400/30">
+                      Photo 3: Window / Outdoor View
+                    </span>
+                  </div>
+                  <div className="p-3.5 flex-1 flex flex-col justify-between space-y-2">
+                    <div>
+                      <h4 className="font-extrabold text-slate-900 text-xs">Window-Side & Terrace Table</h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Cozy window-side view table location perfect for couples & intimate dining.</p>
+                    </div>
+                    <span className="text-[10px] font-bold text-purple-800 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200 w-max">
+                      Scenic View Location
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -557,6 +818,20 @@ export default function RestaurantDetailPage({
                     <option value={timeSlot}>{timeSlot}</option>
                   )}
                 </select>
+
+                {/* Editable Custom Time Input */}
+                <div className="mt-1.5 space-y-1">
+                  <input
+                    type="text"
+                    value={timeSlot}
+                    onChange={(e) => setTimeSlot(e.target.value)}
+                    placeholder="e.g. 08:15 PM or 06:45 PM"
+                    className="w-full px-3 py-2 rounded-xl border border-sand-300 font-bold text-xs bg-white text-forest-900 focus:ring-2 focus:ring-forest-800"
+                  />
+                  <p className="text-[10px] text-slate-500 font-medium italic">
+                    ✏️ Editable: You can manually type any pickup or table reservation time above.
+                  </p>
+                </div>
               </div>
 
               {mode === 'canteen_preorder' ? (
@@ -580,6 +855,58 @@ export default function RestaurantDetailPage({
                 </div>
               )}
             </div>
+
+            {mode !== 'canteen_preorder' && (
+              <div className="pt-1 border-t border-sand-200">
+                <label className="block font-bold text-slate-700 mb-1.5">
+                  Reserved Table Time Duration (mins)
+                </label>
+                <div className="grid grid-cols-4 gap-1.5 mb-2">
+                  {[15, 30, 45, 60].map((mins) => (
+                    <button
+                      key={mins}
+                      type="button"
+                      onClick={() => { setDurationMinutes(mins); setCustomDuration(''); }}
+                      className={`py-2 px-1 rounded-xl text-xs font-extrabold transition-all cursor-pointer border ${
+                        durationMinutes === mins
+                          ? 'bg-[#14382B] text-white border-[#14382B] shadow'
+                          : 'bg-sand-50 text-slate-700 hover:bg-sand-100 border-sand-200'
+                      }`}
+                    >
+                      {mins} min
+                    </button>
+                  ))}
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDurationMinutes('custom')}
+                    className={`py-1.5 px-3 rounded-xl text-xs font-bold shrink-0 cursor-pointer border ${
+                      durationMinutes === 'custom'
+                        ? 'bg-[#14382B] text-white border-[#14382B]'
+                        : 'bg-sand-50 text-slate-700 border-sand-200'
+                    }`}
+                  >
+                    Custom Duration
+                  </button>
+                  {durationMinutes === 'custom' && (
+                    <div className="flex items-center gap-1 flex-1">
+                      <input
+                        type="number"
+                        min={5}
+                        max={240}
+                        placeholder="e.g. 90"
+                        value={customDuration}
+                        onChange={(e) => setCustomDuration(e.target.value)}
+                        className="w-full p-1.5 rounded-xl border border-sand-200 bg-sand-50 font-bold text-xs"
+                      />
+                      <span className="text-xs text-slate-500 font-bold">mins</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block font-bold text-slate-700 mb-1">
@@ -641,13 +968,21 @@ export default function RestaurantDetailPage({
                 })}
               </div>
             ) : (
-              <div className="text-center text-slate-400 py-6 text-xs italic">
-                {mode === 'table_only' ? 'Table-only reservation selected. Order food at table!' : 'Cart is empty. Click "+ Add" on menu dishes.'}
+              <div className="text-center text-slate-500 py-6 text-xs bg-sand-50 rounded-2xl border border-sand-200">
+                {mode === 'table_only'
+                  ? '🪑 Table-only reservation selected (₹100). Food is optional! You can add dishes below or order at table.'
+                  : '🛒 Cart is empty. Click "+ Add" on menu dishes below.'}
               </div>
             )}
 
             {/* Bill breakdown */}
             <div className="space-y-1.5 text-xs text-slate-600 pt-3 border-t border-sand-200">
+              {(mode === 'table_only' || mode === 'table_and_food') && (
+                <div className="flex justify-between font-bold text-slate-800">
+                  <span>Table Booking Charge ({durationMinutes === 'custom' ? (customDuration || '60') : durationMinutes} mins)</span>
+                  <span>₹{tablePrice}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span>Items Subtotal</span>
                 <span className="font-semibold">₹{subtotal}</span>
@@ -662,13 +997,21 @@ export default function RestaurantDetailPage({
               </div>
               <div className="flex justify-between text-base font-extrabold text-forest-900 pt-2 border-t border-sand-300">
                 <span>Grand Total</span>
-                <span className="text-terracotta-600">₹{grandTotal > 0 ? grandTotal : 100}</span>
+                <span className="text-terracotta-600">
+                  ₹{grandTotal}
+                </span>
               </div>
+              {grandTotal === 0 && (
+                <p className="text-[10px] text-amber-700 font-semibold text-center pt-1">
+                  (No items selected — Grand Total: ₹0)
+                </p>
+              )}
             </div>
 
             <button
               onClick={handleInitiateBooking}
-              className="w-full gradient-orange-btn text-white font-bold py-3.5 rounded-2xl shadow-lg hover:shadow-xl transition-all text-sm flex items-center justify-center gap-2"
+              disabled={grandTotal === 0 && mode !== 'table_only'}
+              className="w-full gradient-orange-btn text-white font-bold py-3.5 rounded-2xl shadow-lg hover:shadow-xl transition-all text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Proceed to Cashfree Checkout
             </button>

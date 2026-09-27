@@ -19,9 +19,28 @@ export const createCashfreeOrder = async (req, res) => {
       if (!order) return res.status(404).json({ message: 'Order not found' });
       amount = order.totalAmount;
     } else if (bookingId) {
-      const booking = await TableBooking.findById(bookingId);
+      const booking = await TableBooking.findById(bookingId).populate('restaurantId');
       if (!booking) return res.status(404).json({ message: 'Booking not found' });
-      amount = 100; // Nominal seat reservation deposit if table-only
+      
+      const tablePrice = booking.tablePrice !== undefined ? booking.tablePrice : 100;
+      const tax = Math.round(tablePrice * 0.05);
+      const baseWithGst = tablePrice + tax;
+      const tier = booking.restaurantId?.tier || 'premium';
+
+      let platformFee = 0;
+      if (tier === 'canteen') {
+        if (baseWithGst <= 50) platformFee = 0;
+        else if (baseWithGst <= 200) platformFee = Math.max(0, Math.floor(baseWithGst * 0.01));
+        else if (baseWithGst <= 500) platformFee = 5;
+        else platformFee = Math.floor(baseWithGst * 0.015);
+      } else {
+        if (baseWithGst <= 100) platformFee = 0;
+        else if (baseWithGst <= 500) platformFee = 15;
+        else if (baseWithGst <= 1000) platformFee = 20;
+        else platformFee = Math.floor(baseWithGst * 0.02);
+      }
+
+      amount = baseWithGst + platformFee;
     } else {
       return res.status(400).json({ message: 'Order ID or Booking ID is required' });
     }
