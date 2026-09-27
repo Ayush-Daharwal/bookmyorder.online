@@ -19,6 +19,7 @@ export default function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isPastTimeModalOpen, setIsPastTimeModalOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState('home'); // 'home', 'detail', 'provider', 'profile', 'admin'
+  const [profileSubTab, setProfileSubTab] = useState('profile'); // 'profile' or 'bookings'
   const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
 
   const [restaurants, setRestaurants] = useState([]);
@@ -54,6 +55,11 @@ export default function App() {
     checkUser();
     fetchRestaurants();
   }, [selectedTier]);
+
+  // Scroll to top of window on page navigation or tab change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentTab, profileSubTab, selectedRestaurantId]);
 
   useEffect(() => {
     if (user && (user.role === 'customer' || user.role === 'user') && currentTab === 'provider') {
@@ -107,6 +113,11 @@ export default function App() {
         onLogout={handleLogout}
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
+        profileSubTab={profileSubTab}
+        onNavigate={(tab, subTab) => {
+          setCurrentTab(tab);
+          if (subTab) setProfileSubTab(subTab);
+        }}
       />
 
       {/* Main Content Area */}
@@ -407,10 +418,7 @@ export default function App() {
                 
                 <div className="flex items-center gap-2">
                   <button 
-                    onClick={() => {
-                      setCurrentTab('restaurants');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
+                    onClick={() => setCurrentTab('restaurants')}
                     className="text-xs font-bold text-[#D84315] hover:text-[#BF360C] flex items-center gap-1 transition-colors cursor-pointer bg-orange-50 px-3.5 py-2 rounded-xl border border-orange-200"
                   >
                     View All Restaurants <ChevronRight className="w-4 h-4" />
@@ -527,6 +535,8 @@ export default function App() {
             onOpenAuth={() => setIsAuthOpen(true)}
             onLogout={handleLogout}
             onUserUpdate={(updatedUser) => setUser(updatedUser)}
+            initialTab={profileSubTab}
+            onSubTabChange={(tab) => setProfileSubTab(tab)}
           />
         )}
 

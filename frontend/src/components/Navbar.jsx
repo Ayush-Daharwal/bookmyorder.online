@@ -1,7 +1,15 @@
 import React from 'react';
 import { Store, User, LogOut } from 'lucide-react';
 
-export default function Navbar({ user, onOpenAuth, onLogout, currentTab, setCurrentTab }) {
+export default function Navbar({ user, onOpenAuth, onLogout, currentTab, setCurrentTab, profileSubTab = 'profile', onNavigate }) {
+  const handleGoProfile = (subTab) => {
+    if (onNavigate) {
+      onNavigate('profile', subTab);
+    } else {
+      setCurrentTab('profile');
+    }
+  };
+
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-sand-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
@@ -32,10 +40,7 @@ export default function Navbar({ user, onOpenAuth, onLogout, currentTab, setCurr
           </button>
 
           <button
-            onClick={() => {
-              setCurrentTab('restaurants');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
+            onClick={() => setCurrentTab('restaurants')}
             className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
               currentTab === 'restaurants' 
                 ? 'bg-[#14382B] text-white shadow' 
@@ -61,9 +66,9 @@ export default function Navbar({ user, onOpenAuth, onLogout, currentTab, setCurr
 
           {user && (
             <button
-              onClick={() => setCurrentTab('profile')}
-              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
-                currentTab === 'profile' 
+              onClick={() => handleGoProfile('bookings')}
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all cursor-pointer ${
+                currentTab === 'profile' && profileSubTab === 'bookings'
                   ? 'bg-[#14382B] text-white shadow' 
                   : 'text-slate-700 hover:text-slate-900'
               }`}
@@ -77,10 +82,10 @@ export default function Navbar({ user, onOpenAuth, onLogout, currentTab, setCurr
         <div className="flex items-center gap-3">
           {user ? (
             <button
-              onClick={() => setCurrentTab('profile')}
+              onClick={() => handleGoProfile('profile')}
               title="Click to view My Profile & Settings"
               className={`flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border transition-all cursor-pointer group ${
-                currentTab === 'profile'
+                currentTab === 'profile' && profileSubTab === 'profile'
                   ? 'bg-[#14382B] text-white border-[#14382B] shadow-md'
                   : 'bg-[#FAF8F5] hover:bg-sand-100 text-slate-800 border-sand-200 shadow-sm'
               }`}
@@ -101,7 +106,7 @@ export default function Navbar({ user, onOpenAuth, onLogout, currentTab, setCurr
                     </span>
                   )}
                 </div>
-                <p className={`text-[10px] font-medium leading-none mt-0.5 ${currentTab === 'profile' ? 'text-sand-200' : 'text-[#FF5722]'}`}>
+                <p className={`text-[10px] font-medium leading-none mt-0.5 ${currentTab === 'profile' && profileSubTab === 'profile' ? 'text-sand-200' : 'text-[#FF5722]'}`}>
                   View Profile
                 </p>
               </div>

@@ -133,7 +133,7 @@ export default function DigitalReceiptModal({ isOpen, onClose, booking, order, r
                   </p>
                 </div>
               )}
-              {booking && booking.mode !== 'canteen_preorder' && booking.tableNumber && !booking.tableNumber.toLowerCase().includes('no table') && (
+              {booking && booking.mode !== 'canteen_preorder' && booking.tableNumber && !booking.tableNumber.toLowerCase().includes('no table') && !booking.tableNumber.toLowerCase().includes('counter') && (
                 <>
                   <div>
                     <p className="text-slate-400 font-medium text-[10px] uppercase">Assigned Table & Slot</p>
@@ -294,7 +294,9 @@ export default function DigitalReceiptModal({ isOpen, onClose, booking, order, r
             <div>
               <p style={{ margin: '1px 0' }}><strong>Customer Name:</strong> {userName}</p>
               <p style={{ margin: '1px 0' }}><strong>Mobile / Email:</strong> +91 {userPhone} {userEmail !== 'N/A' ? `(${userEmail})` : ''}</p>
-              {booking && <p style={{ margin: '1px 0' }}><strong>Dining Table / Slot:</strong> {booking.tableNumber || 'N/A'} ({booking.timeSlot || ''})</p>}
+              {booking && booking.mode !== 'canteen_preorder' && booking.tableNumber && !booking.tableNumber.toLowerCase().includes('no table') && !booking.tableNumber.toLowerCase().includes('counter') && (
+                <p style={{ margin: '1px 0' }}><strong>Assigned Table & Slot:</strong> {booking.tableNumber} (Time: {booking.timeSlot || ''})</p>
+              )}
             </div>
           </div>
 

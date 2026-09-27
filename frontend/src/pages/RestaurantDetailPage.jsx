@@ -790,48 +790,49 @@ export default function RestaurantDetailPage({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">{mode === 'canteen_preorder' ? 'Pickup Time' : 'Time Slot'}</label>
-                <select
+                <label className="block font-bold text-slate-700 mb-1">
+                  {mode === 'canteen_preorder' ? 'Food Pickup Time' : 'Table / Pickup Time'}
+                </label>
+                <input
+                  type="text"
                   value={timeSlot}
-                  onChange={(e) => {
-                    const newTime = e.target.value;
-                    setTimeSlot(newTime);
-                    if (isPastDateTime(bookingDate, newTime)) {
+                  onChange={(e) => setTimeSlot(e.target.value)}
+                  onBlur={() => {
+                    if (isPastDateTime(bookingDate, timeSlot)) {
                       setIsPastTimeModalOpen(true);
                     } else {
-                      handleCheckSlotAvailability(bookingDate, newTime);
+                      handleCheckSlotAvailability(bookingDate, timeSlot);
                     }
                   }}
-                  className="w-full p-2.5 rounded-xl border border-sand-200 bg-sand-50 font-semibold text-slate-800 cursor-pointer"
-                >
-                  <option value="01:00 PM">01:00 PM (Lunch)</option>
-                  <option value="01:30 PM">01:30 PM (Lunch)</option>
-                  <option value="02:00 PM">02:00 PM (Lunch)</option>
-                  <option value="02:30 PM">02:30 PM (Lunch)</option>
-                  <option value="07:00 PM">07:00 PM (Dinner)</option>
-                  <option value="07:30 PM">07:30 PM (Dinner)</option>
-                  <option value="08:00 PM">08:00 PM (Dinner)</option>
-                  <option value="08:30 PM">08:30 PM (Dinner)</option>
-                  <option value="09:00 PM">09:00 PM (Dinner)</option>
-                  <option value="09:30 PM">09:30 PM (Dinner)</option>
-                  {!['01:00 PM', '01:30 PM', '02:00 PM', '02:30 PM', '07:00 PM', '07:30 PM', '08:00 PM', '08:30 PM', '09:00 PM', '09:30 PM'].includes(timeSlot) && (
-                    <option value={timeSlot}>{timeSlot}</option>
-                  )}
-                </select>
-
-                {/* Editable Custom Time Input */}
-                <div className="mt-1.5 space-y-1">
-                  <input
-                    type="text"
-                    value={timeSlot}
-                    onChange={(e) => setTimeSlot(e.target.value)}
-                    placeholder="e.g. 08:15 PM or 06:45 PM"
-                    className="w-full px-3 py-2 rounded-xl border border-sand-300 font-bold text-xs bg-white text-forest-900 focus:ring-2 focus:ring-forest-800"
-                  />
-                  <p className="text-[10px] text-slate-500 font-medium italic">
-                    ✏️ Editable: You can manually type any pickup or table reservation time above.
-                  </p>
+                  placeholder="e.g. 07:30 PM or 04:15 PM"
+                  className="w-full px-3 py-2.5 rounded-xl border border-sand-300 font-extrabold text-xs bg-white text-forest-900 shadow-sm focus:ring-2 focus:ring-[#14382B]"
+                />
+                <div className="flex flex-wrap gap-1 mt-1.5 text-[10px]">
+                  {['01:00 PM', '02:30 PM', '07:30 PM', '08:30 PM', '09:15 PM'].map((slot) => (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => {
+                        setTimeSlot(slot);
+                        if (isPastDateTime(bookingDate, slot)) {
+                          setIsPastTimeModalOpen(true);
+                        } else {
+                          handleCheckSlotAvailability(bookingDate, slot);
+                        }
+                      }}
+                      className={`px-2 py-0.5 rounded-md border font-semibold cursor-pointer transition-all ${
+                        timeSlot === slot
+                          ? 'bg-[#14382B] text-white border-[#14382B]'
+                          : 'bg-sand-50 text-slate-700 border-sand-200 hover:bg-sand-100'
+                      }`}
+                    >
+                      {slot}
+                    </button>
+                  ))}
                 </div>
+                <p className="text-[10px] text-slate-500 font-medium italic mt-1">
+                  ✏️ Type any custom time manually or tap a quick slot.
+                </p>
               </div>
 
               {mode === 'canteen_preorder' ? (

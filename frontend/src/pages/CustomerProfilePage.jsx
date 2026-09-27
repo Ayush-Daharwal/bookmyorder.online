@@ -4,14 +4,25 @@ import { getMyHistoryApi, addReviewApi, updateProfileApi, requestEmailOtpApi, ve
 import DigitalReceiptModal from '../components/DigitalReceiptModal';
 import { downloadPdfBill } from '../utils/pdfGenerator';
 
-export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUserUpdate }) {
-  const [activeTab, setActiveTab] = useState('bookings'); // 'bookings' or 'profile'
+export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUserUpdate, initialTab = 'profile', onSubTabChange }) {
+  const [activeTab, setActiveTab] = useState(initialTab || 'profile'); // 'profile' or 'bookings'
   const [history, setHistory] = useState({ bookings: [], orders: [] });
   const [visibleHistoryCount, setVisibleHistoryCount] = useState(6);
   const [loading, setLoading] = useState(true);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  const handleTabClick = (tab) => {
+    setActiveTab(tab);
+    if (onSubTabChange) onSubTabChange(tab);
+  };
 
   // Profile Picture Modal state (Remove vs Upload)
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
@@ -307,19 +318,7 @@ export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUser
       {/* Sub-Tab Navigation Bar */}
       <div className="flex items-center gap-2 border-b border-sand-200 pb-3 font-bold text-xs">
         <button
-          onClick={() => setActiveTab('bookings')}
-          className={`px-5 py-2.5 rounded-full transition-all flex items-center gap-2 cursor-pointer ${
-            activeTab === 'bookings'
-              ? 'bg-[#14382B] text-white shadow-md'
-              : 'bg-white text-slate-700 hover:bg-sand-100 border border-sand-200'
-          }`}
-        >
-          <Calendar className="w-4 h-4 text-[#FF5722]" />
-          My Table Reservations & Pre-Orders ({history.bookings?.length || 0})
-        </button>
-
-        <button
-          onClick={() => setActiveTab('profile')}
+          onClick={() => handleTabClick('profile')}
           className={`px-5 py-2.5 rounded-full transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'profile'
               ? 'bg-[#14382B] text-white shadow-md'
@@ -328,6 +327,18 @@ export default function CustomerProfilePage({ user, onOpenAuth, onLogout, onUser
         >
           <User className="w-4 h-4 text-emerald-400" />
           Account Profile & Settings
+        </button>
+
+        <button
+          onClick={() => handleTabClick('bookings')}
+          className={`px-5 py-2.5 rounded-full transition-all flex items-center gap-2 cursor-pointer ${
+            activeTab === 'bookings'
+              ? 'bg-[#14382B] text-white shadow-md'
+              : 'bg-white text-slate-700 hover:bg-sand-100 border border-sand-200'
+          }`}
+        >
+          <Calendar className="w-4 h-4 text-[#FF5722]" />
+          MY Bookings ({history.bookings?.length || 0})
         </button>
       </div>
 

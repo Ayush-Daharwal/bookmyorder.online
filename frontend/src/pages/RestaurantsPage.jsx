@@ -309,8 +309,8 @@ export default function RestaurantsPage({
 
                       {/* Modes Badges */}
                       <div className="flex flex-wrap gap-1.5 pt-1">
-                        {(rest.tier === 'canteen' || rest.category === 'canteen' || rest.supportsTableBooking === false || rest.allowTableBooking === false) ? (
-                          <span className="text-[10px] font-bold bg-[#FAF8F5] text-slate-700 px-2 py-0.5 rounded-lg border border-sand-200">
+                        {(rest.tier === 'canteen' || rest.category === 'canteen' || (rest.name && rest.name.toLowerCase().includes('canteen')) || rest.supportsTableBooking === false || rest.allowTableBooking === false) ? (
+                          <span className="text-[10px] font-bold bg-[#FAF8F5] text-[#D84315] px-2.5 py-0.5 rounded-lg border border-orange-200">
                             🍱 Pre-Order Food Only
                           </span>
                         ) : (
@@ -334,11 +334,15 @@ export default function RestaurantsPage({
                         e.stopPropagation();
                         onOpenDetail(rest._id);
                       }}
-                      className="w-full bg-[#14382B] group-hover:bg-[#1B4D36] text-white px-4 py-2.5 rounded-xl font-extrabold text-xs shadow transition-all flex items-center justify-center gap-1.5"
+                      className={`w-full text-white px-4 py-2.5 rounded-xl font-extrabold text-xs shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        (rest.tier === 'canteen' || rest.category === 'canteen' || (rest.name && rest.name.toLowerCase().includes('canteen')) || rest.supportsTableBooking === false || rest.allowTableBooking === false)
+                          ? 'bg-[#D84315] hover:bg-[#BF360C]'
+                          : 'bg-[#14382B] group-hover:bg-[#1B4D36]'
+                      }`}
                     >
                       <Utensils className="w-3.5 h-3.5" />
-                      {(rest.tier === 'canteen' || rest.category === 'canteen' || rest.supportsTableBooking === false || rest.allowTableBooking === false)
-                        ? 'Pre-Order Food'
+                      {(rest.tier === 'canteen' || rest.category === 'canteen' || (rest.name && rest.name.toLowerCase().includes('canteen')) || rest.supportsTableBooking === false || rest.allowTableBooking === false)
+                        ? 'Pre Order Food'
                         : 'Book Table & Pre-Order'}
                     </button>
                   </div>

@@ -700,13 +700,24 @@ export default function ProviderPortal({ user, onOpenAuth }) {
                   </p>
 
                   <div className="flex flex-wrap items-center gap-4 pt-2">
-                    <button
-                      onClick={() => setIsRegModalOpen(true)}
-                      className="px-8 py-4 rounded-2xl bg-terracotta-500 hover:bg-terracotta-600 text-white font-black text-sm shadow-xl shadow-terracotta-500/30 hover:scale-105 transition-all cursor-pointer flex items-center gap-2"
-                    >
-                      <span>Register as Restaurant with Us</span>
-                      <ArrowRight className="w-5 h-5" />
-                    </button>
+                    {localStorage.getItem('bmo_restaurant_reg_draft') ? (
+                      <button
+                        onClick={() => setIsRegModalOpen(true)}
+                        className="px-8 py-4 rounded-2xl bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-sm shadow-xl hover:scale-105 transition-all cursor-pointer flex items-center gap-2 border-2 border-amber-300"
+                      >
+                        <Sparkles className="w-5 h-5 text-slate-950" />
+                        <span>Continue Saved Application (Resume Step)</span>
+                        <ArrowRight className="w-5 h-5" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setIsRegModalOpen(true)}
+                        className="px-8 py-4 rounded-2xl bg-terracotta-500 hover:bg-terracotta-600 text-white font-black text-sm shadow-xl shadow-terracotta-500/30 hover:scale-105 transition-all cursor-pointer flex items-center gap-2"
+                      >
+                        <span>Register as Restaurant with Us</span>
+                        <ArrowRight className="w-5 h-5" />
+                      </button>
+                    )}
 
                     <button
                       onClick={() => setIsLoginModalOpen(true)}
