@@ -110,7 +110,7 @@ export const downloadPdfBill = async ({ booking, order, restaurant, user }) => {
             <td style="width: 50%; vertical-align: top; padding-left: 8px;">
               <p style="margin: 3px 0;"><strong>Customer Name:</strong> ${userName}</p>
               <p style="margin: 3px 0;"><strong>Mobile / Email:</strong> +91 ${userPhone} ${userEmail !== 'N/A' ? `(${userEmail})` : ''}</p>
-              ${booking && booking.mode !== 'canteen_preorder' && booking.tableNumber && !booking.tableNumber.toLowerCase().includes('no table') ? `
+              ${booking && booking.mode !== 'canteen_preorder' && booking.tableNumber && !booking.tableNumber.toLowerCase().includes('no table') && !booking.tableNumber.toLowerCase().includes('counter') ? `
                 <p style="margin: 3px 0;"><strong>Assigned Table & Slot:</strong> ${tableSlotStr}</p>
                 <p style="margin: 3px 0;"><strong>Booking Duration:</strong> ${durationStr}</p>
               ` : ''}

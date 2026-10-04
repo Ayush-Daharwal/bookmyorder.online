@@ -67,6 +67,13 @@ export default function RestaurantsPage({
         fetched = fetched.filter((r) => r.tier !== 'premium');
       }
 
+      // Sort promoted restaurants to top while preserving tier/city filters
+      fetched.sort((a, b) => {
+        if (a.isPromoted && !b.isPromoted) return -1;
+        if (!a.isPromoted && b.isPromoted) return 1;
+        return 0;
+      });
+
       setRestaurants(fetched);
     } catch (err) {
       console.error('Error fetching restaurants:', err);
@@ -260,6 +267,11 @@ export default function RestaurantsPage({
 
                       {/* Top Overlay Badges */}
                       <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5">
+                        {rest.isPromoted && (
+                          <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-2.5 py-1 rounded-full shadow flex items-center gap-1 border border-amber-300">
+                            <Sparkles className="w-3 h-3 text-slate-950" /> FEATURED PROMOTED
+                          </span>
+                        )}
                         <span className="bg-[#D84315] text-white text-[11px] font-extrabold px-3 py-1 rounded-full shadow uppercase">
                           {rest.discountPercent || 20}% OFF
                         </span>
@@ -309,8 +321,8 @@ export default function RestaurantsPage({
 
                       {/* Modes Badges */}
                       <div className="flex flex-wrap gap-1.5 pt-1">
-                        {(rest.tier === 'canteen' || rest.category === 'canteen' || rest.supportsTableBooking === false || rest.allowTableBooking === false) ? (
-                          <span className="text-[10px] font-bold bg-[#FAF8F5] text-slate-700 px-2 py-0.5 rounded-lg border border-sand-200">
+                        {(rest.tier === 'canteen' || rest.category === 'canteen' || (rest.name && rest.name.toLowerCase().includes('canteen')) || rest.supportsTableBooking === false || rest.allowTableBooking === false) ? (
+                          <span className="text-[10px] font-bold bg-[#FAF8F5] text-[#D84315] px-2.5 py-0.5 rounded-lg border border-orange-200">
                             🍱 Pre-Order Food Only
                           </span>
                         ) : (
@@ -334,11 +346,15 @@ export default function RestaurantsPage({
                         e.stopPropagation();
                         onOpenDetail(rest._id);
                       }}
-                      className="w-full bg-[#14382B] group-hover:bg-[#1B4D36] text-white px-4 py-2.5 rounded-xl font-extrabold text-xs shadow transition-all flex items-center justify-center gap-1.5"
+                      className={`w-full text-white px-4 py-2.5 rounded-xl font-extrabold text-xs shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        (rest.tier === 'canteen' || rest.category === 'canteen' || (rest.name && rest.name.toLowerCase().includes('canteen')) || rest.supportsTableBooking === false || rest.allowTableBooking === false)
+                          ? 'bg-[#D84315] hover:bg-[#BF360C]'
+                          : 'bg-[#14382B] group-hover:bg-[#1B4D36]'
+                      }`}
                     >
                       <Utensils className="w-3.5 h-3.5" />
-                      {(rest.tier === 'canteen' || rest.category === 'canteen' || rest.supportsTableBooking === false || rest.allowTableBooking === false)
-                        ? 'Pre-Order Food'
+                      {(rest.tier === 'canteen' || rest.category === 'canteen' || (rest.name && rest.name.toLowerCase().includes('canteen')) || rest.supportsTableBooking === false || rest.allowTableBooking === false)
+                        ? 'Pre Order Food'
                         : 'Book Table & Pre-Order'}
                     </button>
                   </div>

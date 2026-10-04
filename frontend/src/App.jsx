@@ -19,6 +19,7 @@ export default function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isPastTimeModalOpen, setIsPastTimeModalOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState('home'); // 'home', 'detail', 'provider', 'profile', 'admin'
+  const [profileSubTab, setProfileSubTab] = useState('profile'); // 'profile' or 'bookings'
   const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
 
   const [restaurants, setRestaurants] = useState([]);
@@ -55,6 +56,11 @@ export default function App() {
     fetchRestaurants();
   }, [selectedTier]);
 
+  // Scroll to top of window on page navigation or tab change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentTab, profileSubTab, selectedRestaurantId]);
+
   useEffect(() => {
     if (user && (user.role === 'customer' || user.role === 'user') && currentTab === 'provider') {
       setCurrentTab('home');
@@ -80,7 +86,13 @@ export default function App() {
       if (selectedTier !== 'all') params.tier = selectedTier;
       if (search) params.search = search;
       const res = await getRestaurantsApi(params);
-      setRestaurants(res.data.restaurants || []);
+      let fetched = res.data.restaurants || [];
+      fetched.sort((a, b) => {
+        if (a.isPromoted && !b.isPromoted) return -1;
+        if (!a.isPromoted && b.isPromoted) return 1;
+        return 0;
+      });
+      setRestaurants(fetched);
     } catch (err) {
       console.error('Restaurant fetch error:', err);
     }
@@ -107,6 +119,11 @@ export default function App() {
         onLogout={handleLogout}
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
+        profileSubTab={profileSubTab}
+        onNavigate={(tab, subTab) => {
+          setCurrentTab(tab);
+          if (subTab) setProfileSubTab(subTab);
+        }}
       />
 
       {/* Main Content Area */}
@@ -407,10 +424,7 @@ export default function App() {
                 
                 <div className="flex items-center gap-2">
                   <button 
-                    onClick={() => {
-                      setCurrentTab('restaurants');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
+                    onClick={() => setCurrentTab('restaurants')}
                     className="text-xs font-bold text-[#D84315] hover:text-[#BF360C] flex items-center gap-1 transition-colors cursor-pointer bg-orange-50 px-3.5 py-2 rounded-xl border border-orange-200"
                   >
                     View All Restaurants <ChevronRight className="w-4 h-4" />
@@ -422,6 +436,8 @@ export default function App() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {[...restaurants]
                     .sort((a, b) => {
+                      if (a.isPromoted && !b.isPromoted) return -1;
+                      if (!a.isPromoted && b.isPromoted) return 1;
                       if (b.rating !== a.rating) return b.rating - a.rating;
                       return (b.avgCostForTwo || 0) - (a.avgCostForTwo || 0);
                     })
@@ -438,7 +454,12 @@ export default function App() {
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           />
                           
-                          <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                          <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5">
+                            {rest.isPromoted && (
+                              <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full shadow flex items-center gap-1 border border-amber-300">
+                                <Sparkles className="w-3 h-3 text-slate-950" /> PROMOTED
+                              </span>
+                            )}
                             <span className="bg-[#D84315] text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow uppercase">
                               {rest.discountPercent || 20}% OFF
                             </span>
@@ -527,6 +548,8 @@ export default function App() {
             onOpenAuth={() => setIsAuthOpen(true)}
             onLogout={handleLogout}
             onUserUpdate={(updatedUser) => setUser(updatedUser)}
+            initialTab={profileSubTab}
+            onSubTabChange={(tab) => setProfileSubTab(tab)}
           />
         )}
 

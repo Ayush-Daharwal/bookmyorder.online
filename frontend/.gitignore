@@ -1,14 +1,10 @@
-# Node modules
+# Frontend dependencies
 node_modules/
-**/node_modules/
 
 # Vite & build output
 .vite/
-**/.vite/
 dist/
-**/dist/
 build/
-**/build/
 
 # Logs
 npm-debug.log*
@@ -27,3 +23,7 @@ yarn-error.log*
 # OS files
 .DS_Store
 Thumbs.db
+
+# Vite temporary files
+*.timestamp-*.mjs
+vite.config.js.timestamp-*

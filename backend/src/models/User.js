@@ -38,11 +38,18 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    password: {
+      type: String,
+    },
     activeOtp: {
       code: String,
       expiresAt: Date,
     },
     emailOtp: {
+      code: String,
+      expiresAt: Date,
+    },
+    adminResetOtp: {
       code: String,
       expiresAt: Date,
     },
