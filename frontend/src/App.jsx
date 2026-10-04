@@ -86,7 +86,13 @@ export default function App() {
       if (selectedTier !== 'all') params.tier = selectedTier;
       if (search) params.search = search;
       const res = await getRestaurantsApi(params);
-      setRestaurants(res.data.restaurants || []);
+      let fetched = res.data.restaurants || [];
+      fetched.sort((a, b) => {
+        if (a.isPromoted && !b.isPromoted) return -1;
+        if (!a.isPromoted && b.isPromoted) return 1;
+        return 0;
+      });
+      setRestaurants(fetched);
     } catch (err) {
       console.error('Restaurant fetch error:', err);
     }
@@ -430,6 +436,8 @@ export default function App() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {[...restaurants]
                     .sort((a, b) => {
+                      if (a.isPromoted && !b.isPromoted) return -1;
+                      if (!a.isPromoted && b.isPromoted) return 1;
                       if (b.rating !== a.rating) return b.rating - a.rating;
                       return (b.avgCostForTwo || 0) - (a.avgCostForTwo || 0);
                     })
@@ -446,7 +454,12 @@ export default function App() {
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           />
                           
-                          <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                          <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5">
+                            {rest.isPromoted && (
+                              <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full shadow flex items-center gap-1 border border-amber-300">
+                                <Sparkles className="w-3 h-3 text-slate-950" /> PROMOTED
+                              </span>
+                            )}
                             <span className="bg-[#D84315] text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow uppercase">
                               {rest.discountPercent || 20}% OFF
                             </span>

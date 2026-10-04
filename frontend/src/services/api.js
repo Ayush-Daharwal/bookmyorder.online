@@ -54,15 +54,28 @@ export const createCashfreeOrderApi = (data) => API.post('/payments/create-order
 export const verifyCashfreePaymentApi = (cfOrderId) => API.get(`/payments/verify/${cfOrderId}`);
 
 // Admin APIs
+export const adminLoginDirectApi = (data) => API.post('/admin/login', data);
+export const requestAdminPasswordOtpApi = (email) => API.post('/admin/request-password-otp', { email });
+export const resetAdminPasswordApi = (data) => API.post('/admin/reset-password', data);
+
 export const getAdminMetricsApi = () => API.get('/admin/metrics');
 export const getAdminRestaurantsApi = () => API.get('/admin/restaurants');
+export const togglePromoteRestaurantApi = (id) => API.patch(`/admin/restaurants/${id}/promote`);
 export const updateRestaurantStatusApi = (id, data) => API.patch(`/admin/restaurants/${id}/status`, data);
+export const deleteRestaurantApi = (id) => API.delete(`/admin/restaurants/${id}`);
+
 export const getAdminReviewsApi = () => API.get('/admin/reviews');
 export const deleteAdminReviewApi = (id) => API.delete(`/admin/reviews/${id}`);
 export const getAdminUsersApi = () => API.get('/admin/users');
+
 export const getPendingApplicationsApi = () => API.get('/admin/restaurant-applications');
 export const approveRestaurantApplicationApi = (id) => API.post(`/admin/approve-restaurant-application/${id}`);
 export const rejectRestaurantApplicationApi = (id, data) => API.post(`/admin/reject-restaurant-application/${id}`, data);
+
+export const getPlatformSettingsApi = () => API.get('/admin/settings');
+export const updatePlatformSettingsApi = (data) => API.put('/admin/settings', data);
+export const getPlatformExpensesApi = () => API.get('/admin/expenses');
+export const addPlatformExpenseApi = (data) => API.post('/admin/expenses', data);
 
 // Gemini AI Assistant API
 export const getAiRecommendationApi = (data) => API.post('/ai/recommend', data);

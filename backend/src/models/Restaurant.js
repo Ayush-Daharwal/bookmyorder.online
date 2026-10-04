@@ -91,6 +91,13 @@ const restaurantSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isPromoted: {
+      type: Boolean,
+      default: false,
+    },
+    promotedAt: {
+      type: Date,
+    },
     modesSupported: {
       mode1TableAndFood: { type: Boolean, default: true },
       mode2TableOnly: { type: Boolean, default: true },

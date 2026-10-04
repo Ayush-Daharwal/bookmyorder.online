@@ -67,6 +67,13 @@ export default function RestaurantsPage({
         fetched = fetched.filter((r) => r.tier !== 'premium');
       }
 
+      // Sort promoted restaurants to top while preserving tier/city filters
+      fetched.sort((a, b) => {
+        if (a.isPromoted && !b.isPromoted) return -1;
+        if (!a.isPromoted && b.isPromoted) return 1;
+        return 0;
+      });
+
       setRestaurants(fetched);
     } catch (err) {
       console.error('Error fetching restaurants:', err);
@@ -260,6 +267,11 @@ export default function RestaurantsPage({
 
                       {/* Top Overlay Badges */}
                       <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5">
+                        {rest.isPromoted && (
+                          <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-2.5 py-1 rounded-full shadow flex items-center gap-1 border border-amber-300">
+                            <Sparkles className="w-3 h-3 text-slate-950" /> FEATURED PROMOTED
+                          </span>
+                        )}
                         <span className="bg-[#D84315] text-white text-[11px] font-extrabold px-3 py-1 rounded-full shadow uppercase">
                           {rest.discountPercent || 20}% OFF
                         </span>
